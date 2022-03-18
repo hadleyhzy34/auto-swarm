@@ -21,32 +21,17 @@ rospy
 ## prerequiste
 ## ros
 ```
-sudo apt-get install ros-<distro>-desktop-full
-```
-
-```
-sudo apt-get install ros-<distro>-roscpp
-```
-
-```
-sudo apt-get install ros-<distro>-rospy
-```
-
-```
-sudo apt-get install ros-<distro>-nav-msgs
-```
-
-```
-sudo apt install ros-<distro>-nav-msgs
+sudo apt-get install ros-<distro>-desktop-full ros-<distro>-roscpp ros-<distro>-rospy ros-<distro>-nav-msgs ros-<distro>-nav-msgs
 ```
 
 ## dependencies
 ### ros dependencies
-go to top of project folder and execute this command
+go to top of the folder and execute this command
 
 ```
 rosdep install --from-paths src --ignore-src -r -y
 ```
+
 ### vtk installation
 
 ```
@@ -57,7 +42,7 @@ cmake ..
 sudo make install
 ```
 
-### ![pcl installation](https://pcl.readthedocs.io/en/latest/compiling_pcl_posix.html#compiling-pcl-posix)
+### [pcl installation](https://pcl.readthedocs.io/en/latest/compiling_pcl_posix.html#compiling-pcl-posix)
 
 ### gtsam installation
 
