@@ -1,5 +1,7 @@
 .vscode/settings.json
 .catkin_workspace
+.catkin_tools
+.catkin_tools/
 build/
 devel/
 files/

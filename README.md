@@ -43,7 +43,7 @@ sudo make install
 
 ## [pcl installation](https://pcl.readthedocs.io/en/latest/compiling_pcl_posix.html#compiling-pcl-posix)
 
-go to [Github] link and download certain version of PCL, uncompress the tar-gzip archive
+go to [Github](https://github.com/PointCloudLibrary/pcl/releases) link and download certain version of PCL, uncompress the tar-gzip archive
 
 ```
 tar -xvf pcl-pcl-1.12.1.tar.gz
