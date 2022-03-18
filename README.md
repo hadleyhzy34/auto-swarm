@@ -9,9 +9,35 @@ catkin_make -j1
 source devel/setup.bash
 roslaunch ego_planner simple_run.launch
 ```
-<!If your network to github is slow, We recommend you to try the gitee repository [https://gitee.com/iszhouxin/ego-planner-swarm](https://gitee.com/iszhouxin/ego-planner-swarm). They synchronize automatically./>
 
 If you find this work useful or interesting, please kindly give us a star :star:, thanks!:grinning:
+
+# Environment
+
+# Installation
+
+# Components && Applications
+
+## end to end
+### Reinforcement Learning
+
+### Imitation Learning
+
+## Localization && Mapping
+
+## Perception
+
+## Sensor Fusion
+
+## Global Planner
+
+## Local Planner
+
+## Controller
+
+# Simulation
+
+# Deployment
 
 # Acknowledgements
 
