@@ -62,13 +62,13 @@ cd build
 cmake ..
 sudo make install
 ```
-## Compilation
+# Compilation
 
 ```
 catkin_make -j$(nproc)
 ```
 
-### issues and discussion
+## issues and discussion
 
 * issue1
     * issue: undefined reference to 'pcl::KdTreeFLANN'
@@ -95,11 +95,28 @@ catkin_make -j$(nproc)
 # Components && Applications
 
 ## end to end
+
 ### Reinforcement Learning
+
+* on-policy
+* off-policy
 
 ### Imitation Learning
 
+* behavior cloning
+* inverse reinforcement learning
+
 ## Localization && Mapping
+
+### Localization
+* lidar odometry
+* vision odometry
+* mapping localization
+
+### Lidar Mapping
+* lego-loam
+
+### Vision Mapping
 
 ## Perception
 
@@ -109,10 +126,24 @@ catkin_make -j$(nproc)
 
 ## Local Planner
 
+* RL path planner
+* ego planner
+* orca
+* mpc
+
 ## Controller
+
+* Pure Pursuit
+* PID
+* LQR + PID
+* MPC + IPOPT
+* MPC + Casadi
 
 # Simulation
 
 # Deployment
+
+* GPU/CUDA
+* TensoRT
 
 # Acknowledgements
