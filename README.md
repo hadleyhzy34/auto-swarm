@@ -19,21 +19,19 @@ VTK --version 8.2.0
 ROS --version 18.04
 
 # Installation
-## prerequiste
 ## ros
 ```
 sudo apt-get install ros-<distro>-desktop-full ros-<distro>-roscpp ros-<distro>-rospy ros-<distro>-nav-msgs ros-<distro>-nav-msgs
 ```
 
-## dependencies
-### ros dependencies
+## ros dependencies
 go to top of the folder and execute this command
 
 ```
 rosdep install --from-paths src --ignore-src -r -y
 ```
 
-### vtk installation
+## vtk installation
 
 ```
 git clone --recursive https://gitlab.kitware.com/vtk/vtk.git
@@ -43,9 +41,19 @@ cmake ..
 sudo make install
 ```
 
-### [pcl installation](https://pcl.readthedocs.io/en/latest/compiling_pcl_posix.html#compiling-pcl-posix)
+## [pcl installation](https://pcl.readthedocs.io/en/latest/compiling_pcl_posix.html#compiling-pcl-posix)
 
-### gtsam installation
+go to [Github] link and download certain version of PCL, uncompress the tar-gzip archive
+
+```
+tar -xvf pcl-pcl-1.12.1.tar.gz
+cd pcl-pcl-1.12.1 && mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+make -j2
+sudo make -j2 install
+```
+
+## gtsam installation
 
 ```
 git clone https://bitbucket.org/gtborg/gtsam.git
