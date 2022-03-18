@@ -3,19 +3,20 @@ Compiling tests passed on ubuntu **16.04, 18.04, and 20.04** with ros installed.
 You can just execute the following commands one by one.
 ```
 sudo apt-get install libarmadillo-dev
-git clone https://github.com/ZJU-FAST-Lab/ego-planner-swarm.git
-cd ego-planner-swarm
+git clone https://github.com/hadleyhzy34/auto-swarm.git
+cd auto-swarm
 catkin_make -j1
 source devel/setup.bash
-roslaunch ego_planner simple_run.launch
 ```
-
-If you find this work useful or interesting, please kindly give us a star :star:, thanks!:grinning:
 
 # Environment
 PCL --version 1.12.1
-roscpp
-rospy
+
+GTSAM --version 4
+
+VTK --version 8.2.0
+
+ROS --version 18.04
 
 # Installation
 ## prerequiste
