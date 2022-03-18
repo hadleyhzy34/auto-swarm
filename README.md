@@ -13,8 +13,61 @@ roslaunch ego_planner simple_run.launch
 If you find this work useful or interesting, please kindly give us a star :star:, thanks!:grinning:
 
 # Environment
+PCL --version 1.12.1
+roscpp
+rospy
 
 # Installation
+## prerequiste
+## ros
+```
+sudo apt-get install ros-<distro>-desktop-full
+```
+
+```
+sudo apt-get install ros-<distro>-roscpp
+```
+
+```
+sudo apt-get install ros-<distro>-rospy
+```
+
+```
+sudo apt-get install ros-<distro>-nav-msgs
+```
+
+```
+sudo apt install ros-<distro>-nav-msgs
+```
+
+## dependencies
+### ros dependencies
+go to top of project folder and execute this command
+
+```
+rosdep install --from-paths src --ignore-src -r -y
+```
+### vtk installation
+
+```
+git clone --recursive https://gitlab.kitware.com/vtk/vtk.git
+mkdir build
+cd build
+cmake ..
+sudo make install
+```
+
+### ![pcl installation](https://pcl.readthedocs.io/en/latest/compiling_pcl_posix.html#compiling-pcl-posix)
+
+### gtsam installation
+
+```
+git clone https://bitbucket.org/gtborg/gtsam.git
+mkdir build
+cd build
+cmake ..
+sudo make install
+```
 
 # Components && Applications
 
