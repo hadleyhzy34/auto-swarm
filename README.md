@@ -19,19 +19,24 @@ VTK --version 7.1.1
 ROS --version 18.04
 
 # Installation
-## ros
+## ros(required)
 ```
 sudo apt-get install ros-<distro>-desktop-full ros-<distro>-roscpp ros-<distro>-rospy ros-<distro>-nav-msgs ros-<distro>-nav-msgs
+sudo apt install ros-<distro>-costmap-2d \
+ros-<distro>-move-base \
+ros-<distro>-global-planner \
+ros-<distro>-amcl
+ros-<distro>-ackermann-msgs
 ```
 
-## ros dependencies
+## ros dependencies(required)
 go to top of the folder and execute this command
 
 ```
 rosdep install --from-paths src --ignore-src -r -y
 ```
 
-## vtk installation
+## vtk installation(optional)
 
 ```
 git clone --recursive https://gitlab.kitware.com/vtk/vtk.git
@@ -42,7 +47,7 @@ make -j12
 sudo make install
 ```
 
-## [pcl installation](https://pcl.readthedocs.io/en/latest/compiling_pcl_posix.html#compiling-pcl-posix)
+## [pcl installation](https://pcl.readthedocs.io/en/latest/compiling_pcl_posix.html#compiling-pcl-posix)(optional)
 
 go to [Github](https://github.com/PointCloudLibrary/pcl/releases) link and download certain version of PCL, uncompress the tar-gzip archive
 
@@ -53,7 +58,7 @@ make -j2
 sudo make -j2 install
 ```
 
-## gtsam installation
+## gtsam installation(optional)
 
 ```
 git clone https://bitbucket.org/gtborg/gtsam.git
@@ -62,6 +67,53 @@ cd build
 cmake ..
 sudo make install
 ```
+
+## [Ipopt](https://coin-or.github.io/Ipopt/INSTALL.html) installation(optional)
+
+### Install CPPAD & Fortran
+```
+sudo apt-get install cppad gfortran
+```
+
+### Get ipopt source code
+
+```
+wget https://www.coin-or.org/download/source/Ipopt/Ipopt-3.12.9.tgz
+tar -zxvf Ipopt-3.12.9.tgz
+```
+
+### Step by step download the libraries
+
+```
+cd Ipopt-3.12.9/ThirdParty/Blas
+ ./get.Blas
+ cd ../Lapack
+ ./get.Lapack
+ cd ../Mumps
+ ./get.Mumps
+ cd ../Metis
+ ./get.Metis
+```
+
+```
+cd {$CUSTOM_PATH}/Ipopt-3.12.9
+mkdir build  && cd build
+../configure --prefix=/usr/local
+make -j$(nproc)
+sudo make install
+```
+
+* issue: mpi.h file or dir not found:
+  Solution: make sure third party lib Mumps is downloaded and uncompressed properly
+
+### Copy install files into specific directory
+```
+cd CUSTOM_PATH/Ipopt-3.12.8/build
+sudo cp -a include/* /usr/include/.
+sudo cp -a lib/* /usr/lib/.
+```
+
+
 # Compilation
 
 ```
@@ -145,5 +197,13 @@ catkin_make -j$(nproc)
 
 * GPU/CUDA
 * TensoRT
+
+# How to make contributions
+
+## create a new application package
+
+```
+catkin_create_pkg mpc roscpp rospy std_msgs
+```
 
 # Acknowledgements
