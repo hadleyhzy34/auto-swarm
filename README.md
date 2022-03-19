@@ -106,13 +106,12 @@ sudo make install
 * issue: mpi.h file or dir not found:
   Solution: make sure third party lib Mumps is downloaded and uncompressed properly
 
-### Copy install files into specific directory
-```
-cd CUSTOM_PATH/Ipopt-3.12.8/build
-sudo cp -a include/* /usr/include/.
-sudo cp -a lib/* /usr/lib/.
-```
-
+* issue: anaconda3/lib/libfontconfig.so.1: 'FT_Done_MM_Var' undefined reference collect2: error: ld returned 1 exit status
+  Solution: 
+    ```
+    sudo rm /home/**/anaconda3/lib/libuuid.so.1
+    sudo ln -s /lib/x86_64-linux-gnu/libuuid.so.1  /home/**/anaconda3/lib/libuuid.so.1
+    ```
 
 # Compilation
 
@@ -185,11 +184,12 @@ catkin_make -j$(nproc)
 
 ## Controller
 
-* Pure Pursuit
-* PID
-* LQR + PID
-* MPC + IPOPT
-* MPC + Casadi
+### Pure Pursuit
+### PID
+### LQR + PID
+### MPC(IPOPT/C++)
+### MPC(Casadi/python2)
+
 
 # Simulation
 
