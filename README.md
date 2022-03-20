@@ -5,7 +5,7 @@ You can just execute the following commands one by one.
 sudo apt-get install libarmadillo-dev
 git clone https://github.com/hadleyhzy34/auto-swarm.git
 cd auto-swarm
-catkin_make -j1
+catkin_make -j$(nproc)
 source devel/setup.bash
 ```
 
@@ -116,7 +116,10 @@ sudo make install
 # Compilation
 
 ```
+git clone https://github.com/hadleyhzy34/auto-swarm.git
+cd auto-swarm
 catkin_make -j$(nproc)
+source devel/setup.bash
 ```
 
 ## issues and discussion
@@ -187,11 +190,49 @@ catkin_make -j$(nproc)
 ### Pure Pursuit
 ### PID
 ### LQR + PID
+
 ### MPC(IPOPT/C++)
-### MPC(Casadi/python2)
+
+### [MPC](https://github.com/hadleyhzy34/auto-swarm/tree/main/src/core/controller/mpc_python_traj)(Casadi/python2)
 
 
 # Simulation
+
+## Gazebo Simulation
+### turtlebot3 simulation
+#### folder
+
+```
+src/simulation/turtlebot3*
+```
+
+#### instructions
+
+```
+vim ~/.bashrc
+export TURTLEBOT3_MODEL=burger
+source ~/.bashrc
+```
+
+* launch world env
+```
+roslaunch turtlebot3_gazebo turtlebot3_world.launch
+```
+
+* launch rviz visualization
+```
+roslaunch turtlebot3_gazebo turtlebot3_gazebo_rviz.launch
+```
+
+* launch teleop key
+```
+roslaunch turtlebot3_teleop turtlebot3_teleop_key.launch
+```
+
+* lanuch multi-robot world env
+```
+roslaunch turtlebot3_gazebo multi_turtlebot3.launch
+```
 
 # Deployment
 
