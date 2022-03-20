@@ -234,6 +234,8 @@ roslaunch turtlebot3_teleop turtlebot3_teleop_key.launch
 roslaunch turtlebot3_gazebo multi_turtlebot3.launch
 ```
 
+![multi-robot](https://github.com/hadleyhzy34/auto-swarm/blob/main/src/simulation/turtlebot3/screen_shot.png)
+
 # Deployment
 
 * GPU/CUDA
