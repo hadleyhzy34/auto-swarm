@@ -91,7 +91,7 @@ roslaunch ego_planner rviz.launch
 initialize single drone without making any decisions
 ```
 source devel/setup.bash
-roslaunch ego_planner swarm.launch
+roslaunch ego_planner swarm_test.launch
 ```
 
 ## Gazebo Simulation
