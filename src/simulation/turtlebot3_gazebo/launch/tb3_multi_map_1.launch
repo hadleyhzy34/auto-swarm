@@ -9,7 +9,7 @@
   <arg name="6_tb3"  default="tb3_6"/>
   <arg name="7_tb3"  default="tb3_7"/>
 
-  <arg name="0_tb3_x_pos" default="-7.0"/>
+  <arg name="0_tb3_x_pos" default="-6.0"/>
   <arg name="0_tb3_y_pos" default=" 3.0"/>
   <arg name="0_tb3_z_pos" default=" 0.0"/>
   <arg name="0_tb3_yaw"   default=" 1.57"/>
@@ -17,41 +17,41 @@
   <arg name="1_tb3_x_pos" default="-1.0"/>
   <arg name="1_tb3_y_pos" default=" 1.0"/>
   <arg name="1_tb3_z_pos" default=" 0.0"/>
-  <arg name="1_tb3_yaw"   default=" 1.57"/>
+  <arg name="1_tb3_yaw"   default=" 0.0"/>
 
   <arg name="2_tb3_x_pos" default=" 4.0"/>
   <arg name="2_tb3_y_pos" default=" 4.0"/>
   <arg name="2_tb3_z_pos" default=" 0.0"/>
-  <arg name="2_tb3_yaw"   default=" 1.57"/>
+  <arg name="2_tb3_yaw"   default=" 0.0"/>
 
   <arg name="3_tb3_x_pos" default=" 9.0"/>
-  <arg name="3_tb3_y_pos" default=" 3.0"/>
+  <arg name="3_tb3_y_pos" default=" 4.0"/>
   <arg name="3_tb3_z_pos" default=" 0.0"/>
   <arg name="3_tb3_yaw"   default=" 1.57"/>
 
   <arg name="4_tb3_x_pos" default="-7.0"/>
-  <arg name="4_tb3_y_pos" default="-3.0"/>
+  <arg name="4_tb3_y_pos" default="-1.0"/>
   <arg name="4_tb3_z_pos" default=" 0.0"/>
-  <arg name="4_tb3_yaw"   default=" 1.57"/>
+  <arg name="4_tb3_yaw"   default=" 1.0"/>
 
   <arg name="5_tb3_x_pos" default="-1.0"/>
   <arg name="5_tb3_y_pos" default="-1.0"/>
   <arg name="5_tb3_z_pos" default=" 0.0"/>
-  <arg name="5_tb3_yaw"   default=" 1.57"/>
+  <arg name="5_tb3_yaw"   default=" 0.0"/>
 
   <arg name="6_tb3_x_pos" default=" 4.0"/>
   <arg name="6_tb3_y_pos" default="-4.0"/>
   <arg name="6_tb3_z_pos" default=" 0.0"/>
   <arg name="6_tb3_yaw"   default=" 1.57"/>
 
-  <arg name="7_tb3_x_pos" default=" 9.0"/>
-  <arg name="7_tb3_y_pos" default="-3.0"/>
+  <arg name="7_tb3_x_pos" default=" 6.0"/>
+  <arg name="7_tb3_y_pos" default="-4.0"/>
   <arg name="7_tb3_z_pos" default=" 0.0"/>
-  <arg name="7_tb3_yaw"   default=" 1.57"/>
+  <arg name="7_tb3_yaw"   default=" 0.0"/>
 
 
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="world_name" value="$(find turtlebot3_gazebo)/worlds/turtlebot3_multi_map0.world"/>
+    <arg name="world_name" value="$(find turtlebot3_gazebo)/worlds/tb3_multi_map_1.world"/>
     <arg name="paused" value="false"/>
     <arg name="use_sim_time" value="true"/>
     <arg name="gui" value="true"/>
@@ -114,7 +114,7 @@
     <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-urdf -model $(arg 4_tb3) -x $(arg 4_tb3_x_pos) -y $(arg 4_tb3_y_pos) -z $(arg 4_tb3_z_pos) -Y $(arg 4_tb3_yaw) -param robot_description" />
   </group>
 
-  <!--<group ns = "$(arg 5_tb3)">
+  <group ns = "$(arg 5_tb3)">
     <param name="robot_description" command="$(find xacro)/xacro --inorder $(find turtlebot3_description)/urdf/turtlebot3_$(arg model)_for_autorace_2020.urdf.xacro" />
 
     <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen">
@@ -123,9 +123,9 @@
     </node>
     
     <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-urdf -model $(arg 5_tb3) -x $(arg 5_tb3_x_pos) -y $(arg 5_tb3_y_pos) -z $(arg 5_tb3_z_pos) -Y $(arg 5_tb3_yaw) -param robot_description" />
-  </group>-->
+  </group>
 
-  <!--<group ns = "$(arg 6_tb3)">
+  <group ns = "$(arg 6_tb3)">
     <param name="robot_description" command="$(find xacro)/xacro --inorder $(find turtlebot3_description)/urdf/turtlebot3_$(arg model)_for_autorace_2020.urdf.xacro" />
 
     <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen">
@@ -134,9 +134,9 @@
     </node>
     
     <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-urdf -model $(arg 6_tb3) -x $(arg 6_tb3_x_pos) -y $(arg 6_tb3_y_pos) -z $(arg 6_tb3_z_pos) -Y $(arg 6_tb3_yaw) -param robot_description" />
-  </group>-->
+  </group>
 
-  <!--<group ns = "$(arg 7_tb3)">
+  <group ns = "$(arg 7_tb3)">
     <param name="robot_description" command="$(find xacro)/xacro --inorder $(find turtlebot3_description)/urdf/turtlebot3_$(arg model)_for_autorace_2020.urdf.xacro" />
 
     <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen">
@@ -145,7 +145,7 @@
     </node>
     
     <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-urdf -model $(arg 7_tb3) -x $(arg 7_tb3_x_pos) -y $(arg 7_tb3_y_pos) -z $(arg 7_tb3_z_pos) -Y $(arg 7_tb3_yaw) -param robot_description" />
-  </group>-->
+  </group>
 
 
 </launch>

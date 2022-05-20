@@ -9,7 +9,7 @@
   <arg name="6_tb3"  default="tb3_6"/>
   <arg name="7_tb3"  default="tb3_7"/>
 
-  <arg name="0_tb3_x_pos" default="-7.0"/>
+  <arg name="0_tb3_x_pos" default="-6.0"/>
   <arg name="0_tb3_y_pos" default=" 3.0"/>
   <arg name="0_tb3_z_pos" default=" 0.0"/>
   <arg name="0_tb3_yaw"   default=" 1.57"/>
@@ -17,37 +17,37 @@
   <arg name="1_tb3_x_pos" default="-1.0"/>
   <arg name="1_tb3_y_pos" default=" 1.0"/>
   <arg name="1_tb3_z_pos" default=" 0.0"/>
-  <arg name="1_tb3_yaw"   default=" 1.57"/>
+  <arg name="1_tb3_yaw"   default=" 0.0"/>
 
   <arg name="2_tb3_x_pos" default=" 4.0"/>
   <arg name="2_tb3_y_pos" default=" 4.0"/>
   <arg name="2_tb3_z_pos" default=" 0.0"/>
-  <arg name="2_tb3_yaw"   default=" 1.57"/>
+  <arg name="2_tb3_yaw"   default=" 0.0"/>
 
   <arg name="3_tb3_x_pos" default=" 9.0"/>
-  <arg name="3_tb3_y_pos" default=" 3.0"/>
+  <arg name="3_tb3_y_pos" default=" 2.0"/>
   <arg name="3_tb3_z_pos" default=" 0.0"/>
   <arg name="3_tb3_yaw"   default=" 1.57"/>
 
   <arg name="4_tb3_x_pos" default="-7.0"/>
-  <arg name="4_tb3_y_pos" default="-3.0"/>
+  <arg name="4_tb3_y_pos" default="-2.0"/>
   <arg name="4_tb3_z_pos" default=" 0.0"/>
-  <arg name="4_tb3_yaw"   default=" 1.57"/>
+  <arg name="4_tb3_yaw"   default=" 1.0"/>
 
   <arg name="5_tb3_x_pos" default="-1.0"/>
   <arg name="5_tb3_y_pos" default="-1.0"/>
   <arg name="5_tb3_z_pos" default=" 0.0"/>
-  <arg name="5_tb3_yaw"   default=" 1.57"/>
+  <arg name="5_tb3_yaw"   default=" 0.0"/>
 
   <arg name="6_tb3_x_pos" default=" 4.0"/>
   <arg name="6_tb3_y_pos" default="-4.0"/>
   <arg name="6_tb3_z_pos" default=" 0.0"/>
   <arg name="6_tb3_yaw"   default=" 1.57"/>
 
-  <arg name="7_tb3_x_pos" default=" 9.0"/>
-  <arg name="7_tb3_y_pos" default="-3.0"/>
+  <arg name="7_tb3_x_pos" default=" 6.0"/>
+  <arg name="7_tb3_y_pos" default="-4.0"/>
   <arg name="7_tb3_z_pos" default=" 0.0"/>
-  <arg name="7_tb3_yaw"   default=" 1.57"/>
+  <arg name="7_tb3_yaw"   default=" 0.0"/>
 
 
   <include file="$(find gazebo_ros)/launch/empty_world.launch">

@@ -23,6 +23,39 @@ ROS --version 18.04, 20.04
 * on-policy
 * off-policy
 
+Features:
+* []parallel multi-agent training
+* []ground truth map label
+* [check]GPU supported training and inference
+* []sensor synchronization mechanism
+* []baseline methods support
+* [check]Gym-like Env wrapper
+
+
+#### Gazebo based environment wrapper
+
+1. conda environment
+
+```
+conda create -n ros_tb3 pyhton=3.6.9
+conda activate ros_tb3
+```
+
+2. pip installation
+
+```
+pip install torch
+```
+
+3. Env() API
+
+```
+Env::step()
+Env::reset()
+```
+
+
+
 ### Imitation Learning
 
 * behavior-cloning
