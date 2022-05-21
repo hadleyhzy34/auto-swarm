@@ -25,10 +25,10 @@ ROS --version 18.04, 20.04
 
 Features:
 * [x]parallel multi-agent training
-* []ground truth map label
+* [ ]ground truth map label
 * [x]GPU supported training and inference
 * [x]sensor synchronization mechanism
-* []baseline methods support
+* [ ]baseline methods support
 * [x]Gym-like Env wrapper
 
 
