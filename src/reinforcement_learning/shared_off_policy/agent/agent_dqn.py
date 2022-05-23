@@ -46,10 +46,10 @@ class Agent(nn.Module):
         self.device = device
         print(f'agent training device is loaded: {self.device}')
         
-        # Buffer
-        self.memory_capacity = 2000
-        self.memory = Buffer(self.memory_capacity, self.state_size, self.device)
-        
+        # Buffer across all processes
+        # self.memory = Buffer(self.memory_capacity, self.state_size, self.device)
+        # self.share_memory = shared_buffer
+
         # DQN model
         # why using two q networks: https://ai.stackexchange.com/questions/22504/why-do-we-need-target-network-in-deep-q-learning
         self.lr = 1e-3
@@ -93,16 +93,18 @@ class Agent(nn.Module):
             action = q_value.max(1)[1].item()
             return action
     
-    def store_transition(self, state, action, reward, next_state, done):
+    def store_transition(self, state, action, reward, next_state, done, shared_buffer, shared_lock):
         # import ipdb;ipdb.set_trace()
         state = torch.tensor(state, device = self.device)
         action = torch.tensor(action, device = self.device).unsqueeze(0) #(1,)
         reward = torch.tensor(reward, device = self.device).unsqueeze(0)
         next_state = torch.tensor(next_state, device = self.device)
         done = torch.tensor(done, device = self.device).unsqueeze(0)
-        self.memory.push(state, action, reward, next_state, done)
+        
+        # print(f'state:{state.shape,state.dtype}, action:{action.shape,action.dtype},reward:{reward.shape,reward.dtype},next_state:{next_state.shape,next_state.dtype},done:{done.shape,done.dtype}')
+        shared_buffer.push(state, action, reward, next_state, done, shared_lock)
 
-    def learn(self):
+    def learn(self, shared_buffer):
         # import ipdb;ipdb.set_trace()
         # update target network 
         if self.learn_step_counter % self.target_replace_iter == 0:
@@ -110,7 +112,8 @@ class Agent(nn.Module):
         self.learn_step_counter += 1
 
         # buffer sampling
-        mini_batch = self.memory.sample(self.batch_size)
+        mini_batch = shared_buffer.sample(self.batch_size)
+        # mini_batch = self.memory.sample(self.batch_size)
         states = mini_batch[:,:self.state_size]
         next_states = mini_batch[:,self.state_size+3:]
         rewards = mini_batch[:,self.state_size+1]

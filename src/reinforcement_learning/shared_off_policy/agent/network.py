@@ -5,6 +5,7 @@ from torch.distributions import Normal
 import random
 import numpy as np
 from collections import namedtuple,deque
+import torch.multiprocessing as mp
 
 LOG_SIG_MAX = 2
 LOG_SIG_MIN = -20
@@ -17,24 +18,35 @@ def weights_init_(m):
         torch.nn.init.constant_(m.bias, 0)
 
 ################### buffer #############################
-class Buffer:
+class Buffer(nn.Module):
     def __init__(self, capacity, state_dim, device = torch.device('cpu')):
+        super().__init__()
         self.capacity = capacity
-        self.pointer = 0
         self.device = device
         self.memory = torch.empty((self.capacity, state_dim + 1 + 1 + state_dim + 1),device=self.device)
+        # share this memory across multiprocessing
+        self.memory.share_memory_()
+        # share pointer across multi processes
+        self.pointer = torch.zeros(1,dtype=torch.int,device=self.device)
+        self.pointer.share_memory_()
     
-    def push(self, state, action, reward, next_state, done):
+    def push(self, state, action, reward, next_state, done, shared_lock):
         """
         Save a transition
         Args:
             state, action, reward, next_state, done
         Func: store transition status into replay buffer
         """
-        # import ipdb;ipdb.set_trace()
-        self.memory[self.pointer % self.capacity] = torch.cat([state,action,reward,next_state,done],0)
-        self.pointer += 1
-
+        shared_lock.acquire()
+        try:
+            # import ipdb;ipdb.set_trace()
+            # print(f'pointer: {self.pointer[0] % self.capacity},{(self.pointer[0] % self.capacity).dtype}')
+            self.memory[self.pointer[0] % self.capacity] = torch.cat([state,action,reward,next_state,done],0)
+            self.pointer[0] += 1
+            # print(f'current pointer is: {self.pointer}')
+        finally:
+            shared_lock.release()
+    
     def sample(self, batch_size):
         '''
         randomly select batch_size samples for network update

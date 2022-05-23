@@ -38,7 +38,7 @@ class Env():
         # self.heading = 0
         # self.yaw = np.zeros(1) # robot yaw angle
         self.theta = np.zeros(2) # [yaw, omega]
-        self.action_size = config.Train.action_size
+        self.action_size = config.Train.action_dim
         self.goal_reached = False
 
         # reward weight
@@ -101,12 +101,12 @@ class Env():
         reward = 0
         if done:
             if self.goal_reached:
-                reward += 500
+                reward += 15
                 self.goal_reached = True
                 self.pub_cmd_vel.publish(Twist())
                 self.status = 'Goal'
             else:
-                reward -= 500
+                reward -= 15
                 self.pub_cmd_vel.publish(Twist())
                 self.status = 'Hit'
         else:

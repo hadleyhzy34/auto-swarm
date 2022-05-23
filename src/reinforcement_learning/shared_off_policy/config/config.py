@@ -8,12 +8,15 @@ Config.namespace = 'tb3_'
 Config.Train = edict()
 Config.Test = edict()
 
+# shared memory
+Config.Memory = edict()
+Config.Memory.capacity = 2000
+
 # training parameters
-Config.Train.batch_size = 64
-Config.Train.state_size = 364
-Config.Train.action_size = 5
+Config.Train.batch_size = 128
+Config.Train.state_dim = 364
+Config.Train.action_dim = 5
 Config.Train.lr = 1e-3
 # Config.Train.device = torch.device('cuda')
 Config.Train.device = torch.device('cpu')
 Config.Train.episodes = 6000
-
