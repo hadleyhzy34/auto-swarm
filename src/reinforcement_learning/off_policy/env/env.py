@@ -69,7 +69,7 @@ class Env():
         self.heading = round(heading, 2)
 
     def getState(self, scan):
-        import ipdb;ipdb.set_trace()
+        # import ipdb;ipdb.set_trace()
         scan_range = []
         heading = self.heading
         min_range = 0.13

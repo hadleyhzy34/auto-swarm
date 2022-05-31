@@ -29,7 +29,24 @@ class Buffer(nn.Module):
         # share pointer across multi processes
         self.pointer = torch.zeros(1,dtype=torch.int,device=self.device)
         self.pointer.share_memory_()
+
+        # shared reward for training visualization
+        self.reward_capacity = 100
+        self.reward_pointer = torch.zeros(1, dtype=torch.int, device=self.device)
+        self.reward_pointer.share_memory_()
+
+        self.shared_reward = torch.zeros(self.reward_capacity, device=self.device)
+        self.shared_reward.share_memory_()
     
+    def push_reward(self, score, shared_lock):
+        shared_lock.acquire()
+        try:
+            self.shared_reward[self.reward_pointer[0] % self.reward_capacity] = score
+            self.reward_pointer[0] += 1
+        finally:
+            shared_lock.release()
+    
+
     def push(self, state, action, reward, next_state, done, shared_lock):
         """
         Save a transition
@@ -94,6 +111,7 @@ class DQN(nn.Module):
             a: (batch_size, action_dim)
         """
         # normalize lidar data
+        # print(f's:{s.device},model:{self.backbone}')
         scan_embedding = self.backbone(s[:,:360]/3.5)
         total_embedding = torch.cat([scan_embedding, s[:,360:]],dim=1)
         # print(f'total_embedding shape is:{total_embedding.shape}')

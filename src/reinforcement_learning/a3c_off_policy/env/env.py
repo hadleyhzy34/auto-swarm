@@ -121,12 +121,12 @@ class Env():
         return reward
        
     def step(self, action):
-        max_angular_vel = 1.5
-        ang_vel = ((self.action_size - 1)/2 - action) * max_angular_vel * 0.5
+        # max_angular_vel = 1.5
+        # ang_vel = ((self.action_size - 1)/2 - action) * max_angular_vel * 0.5
 
         vel_cmd = Twist()
-        vel_cmd.linear.x = 0.15
-        vel_cmd.angular.z = ang_vel
+        vel_cmd.linear.x = action[0]
+        vel_cmd.angular.z = action[1]
         self.pub_cmd_vel.publish(vel_cmd)
 
         # waiting more or less equal to 0.2 s until scan data received, stable behavior

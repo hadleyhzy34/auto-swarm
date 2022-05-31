@@ -1,21 +1,3 @@
-#################################################################################
-# Copyright 2018 ROBOTIS CO., LTD.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#################################################################################
-
-# Authors: Gilbert #
-
 import rospy
 import os
 import json
@@ -29,7 +11,7 @@ import torch
 import torch.nn as nn
 from agent.network import DQN,Buffer
 from env.env import Env
-
+from torch.utils.tensorboard import SummaryWriter 
 
 class Agent(nn.Module):
     def __init__(self, state_size, action_size, device = torch.device('cpu')):
@@ -112,7 +94,7 @@ class Agent(nn.Module):
         self.learn_step_counter += 1
 
         # buffer sampling
-        mini_batch = shared_buffer.sample(self.batch_size)
+        mini_batch = shared_buffer.sample(self.batch_size).to(self.device)
         # mini_batch = self.memory.sample(self.batch_size)
         states = mini_batch[:,:self.state_size]
         next_states = mini_batch[:,self.state_size+3:]
@@ -120,11 +102,17 @@ class Agent(nn.Module):
 
         # actions to int
         actions = mini_batch[:,self.state_size].to(dtype=int)
-        q_eval = self.eval_net(states).gather(1,actions.unsqueeze(-1)).squeeze(-1)
-        q_next = self.tgt_net(next_states).detach()
+        # print(f'action:{actions.device},states:{states.device},self.device:{self.device}')
+        # print(f'res:{self.eval_net.to(self.device)(states).device}')
+
+        #Note to use .to() method since eval and tgt net changed back to cpu method as actor
+        q_eval = self.eval_net.to(self.device)(states).gather(1,actions.unsqueeze(-1)).squeeze(-1)
+        q_next = self.tgt_net.to(self.device)(next_states).detach()
         q_target = rewards + self.gamma * q_next.max(1)[0]
         loss = self.loss(q_eval, q_target)
 
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+
+        return loss
