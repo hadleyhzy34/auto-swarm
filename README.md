@@ -24,12 +24,12 @@ ROS --version 18.04, 20.04
 * off-policy
 
 Features:
-* []parallel multi-agent training
-* []ground truth map label
-* [check]GPU supported training and inference
-* []sensor synchronization mechanism
-* []baseline methods support
-* [check]Gym-like Env wrapper
+* [x]parallel multi-agent training
+* [ ]ground truth map label
+* [x]GPU supported training and inference
+* [x]sensor synchronization mechanism
+* [ ]baseline methods support
+* [x]Gym-like Env wrapper
 
 
 #### Gazebo based environment wrapper
