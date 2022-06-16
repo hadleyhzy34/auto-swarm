@@ -155,6 +155,50 @@ source devel/setup.bash
 * on-policy
 * off-policy
 
+Features:
+* [x]parallel multi-agent training
+* [ ]ground truth map label
+* [x]GPU supported training and inference
+* [x]sensor synchronization mechanism
+* [ ]baseline methods support
+* [x]Gym-like Env wrapper
+
+
+#### Gazebo based environment wrapper
+
+1. conda environment
+
+```
+conda create -n ros_tb3 pyhton=3.6.9
+conda activate ros_tb3
+```
+
+2. pip installation
+
+```
+pip install torch
+```
+
+### `Env()` API
+
+#### Initializing Environment
+
+```
+from env.env import Env
+env = Env(robot_namespace=None)
+```
+
+#### Standard methods
+
+* Stepping
+```
+env.step(self, action: ActType) -> state:numpy.array, reward: float, done: bool
+```
+
+* Resetting
+```
+env.step(self) -> state:numpy.array
+```
 ### Imitation Learning
 
 * behavior cloning
