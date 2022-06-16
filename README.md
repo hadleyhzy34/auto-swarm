@@ -47,13 +47,26 @@ conda activate ros_tb3
 pip install torch
 ```
 
-3. Env() API
+### `Env()` API
+
+#### Initializing Environment
 
 ```
-Env::step()
-Env::reset()
+from env.env import Env
+env = Env(robot_namespace=None)
 ```
 
+#### Standard methods
+
+* Stepping
+```
+env.step(self, action: ActType) -> state:numpy.array, reward: float, done: bool
+```
+
+* Resetting
+```
+env.step(self) -> state:numpy.array
+```
 
 
 ### Imitation Learning
