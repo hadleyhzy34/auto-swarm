@@ -1,3 +1,6 @@
+from tkinter import Y
+
+from numpy import angle
 import rospy
 import os
 import json
@@ -12,7 +15,8 @@ import torch
 import torch.nn as nn
 from agent.network import Net
 from env.env import Env
-from torch.utils.tensorboard import SummaryWriter 
+from torch.utils.tensorboard import SummaryWriter
+import pdb
 
 class Agent(nn.Module):
     def __init__(self, state_size, action_size, device = torch.device('cpu')):
@@ -28,7 +32,6 @@ class Agent(nn.Module):
         self.batch_size = 64
         self.device = device
         print(f'agent training device is loaded: {self.device}')
-        self.inc_count = 0
         
         # Buffer across all processes
         # self.memory = Buffer(self.memory_capacity, self.state_size, self.device)
@@ -37,9 +40,13 @@ class Agent(nn.Module):
         # DQN model
         # why using two q networks: https://ai.stackexchange.com/questions/22504/why-do-we-need-target-network-in-deep-q-learning
         self.lr = 1e-3
-        self.tgt_net = Net(self.state_size, self.action_size, device = self.device)
-        self.local_net = Net(self.state_size, self.action_size, device = self.device)
-        self.optimizer = torch.optim.Adam(self.local_net.parameters(), lr=self.lr)
+        self.length = 10
+        # self.tgt_net = Net(self.state_size, self.action_size, device = self.device)
+        # self.local_net = Net(self.state_size, self.action_size, device = self.device)
+
+        # trajectory generation
+        self.plan_net = Net(self.state_size, self.action_size, device=self.device)
+        self.optimizer = torch.optim.Adam(self.plan_net.parameters(), lr=self.lr)
 
         # target network update frequency
         self.target_replace_iter = 100
@@ -63,35 +70,104 @@ class Agent(nn.Module):
         self.action_scale = torch.tensor([0.11, 1.5]).unsqueeze(0) #(1,2)
         self.action_bias = torch.tensor([0.11, 0.]).unsqueeze(0) #(1,2)
 
-    def choose_action(self, x):
+    def path_planning(self, x):
         """
         Description:
         args:
             x: numpy, (state_size,)n
         return:
-            
+            traj: (l,2), (phi,theta)
         """
+        # pdb.set_trace()
         # import ipdb;ipdb.set_trace()
+        # print(x.shape)
         x = torch.tensor(x,dtype=torch.float,device=self.device).unsqueeze(0) #(1, state_size)
-        # if np.random.uniform() <= self.epsilon:
-            # return np.random.randint(0, self.action_size)
-        # else:
-            # q_value = self.eval_net(x).detach()
-            # action = q_value.max(1)[1].item()
-        mean, sigma, _ = self.local_net(x)
-        # print(f'mean: {mean}')
-        assert mean.max() <= 1 and mean.min() >= -1, "action is out of range"
-        mean = mean * self.action_scale + self.action_bias
-        normal = self.distribution(mean, sigma)
-        action = normal.rsample()
-        action = torch.clamp(action, min=-self.action_scale + self.action_bias, max=self.action_scale + self.action_bias)
-        # print(f'action:{action}')
-        assert action[0,0] >= 0 and action[0,0] <= 0.22 and action[0,1] >= -1.5 and action[0,1] <= 1.5, "action is out of range"
-        # action = torch.tanh(action)
-        # action = action * self.action_scale + self.action_bias
-        return action[0].detach().numpy()
+
+        traj = self.plan_net(x)
+
+        return traj
     
-    def learn(self, global_agent, done, next_state, buffer_s, buffer_a, buffer_r, shared_lock):
+    def traj_follower(self, traj):
+        # print(f'shape:{traj.shape}')
+        # print(traj[1])
+        angular = np.pi / 2 - traj[1,1].detach().numpy()
+
+        linear = np.clip(0.2 * traj[1,0].detach().numpy() / 0.015, a_min = 0., a_max = 0.2)
+
+        return linear, angular
+
+    def learn(self, traj, x, global_agent, shared_lock, tgt_x, tgt_y):
+        """evaluate performance of trajectory
+
+        Args:
+            traj (torch.tensor): (l,2)
+        """
+        loss = 0
+
+        # evaluate distance to goal position
+        # print(traj)
+        x = torch.from_numpy(x)
+        rad_points = torch.zeros((360,2))
+        rad_points[:,0] = torch.cos((torch.arange(0,360) - 90) * torch.pi / 180) * x[0:360]
+        rad_points[:,1] = torch.sin((torch.arange(0,360) - 90) * torch.pi / 180) * x[0:360]
+        
+        # convert axis
+        dist_x = []
+        dist_y = []
+        dist_theta = []
+        dist_x.append(0.)
+        dist_y.append(0.)
+        dist_theta.append(0.)
+
+        for i in range(1,self.length):
+            dist_x.append(traj[i,0] * torch.cos(traj[i,1]+dist_theta[i-1]) + dist_x[i-1])
+            dist_y.append(traj[i,0] * torch.sin(traj[i,1]+dist_theta[i-1]) + dist_y[i-1])
+            dist_theta.append(traj[i,1] + dist_theta[i-1])
+        
+        # print(dist_x[-1])
+        last_dist = torch.linalg.norm(torch.tensor([dist_x[-1],dist_y[-1]]) - torch.tensor([tgt_x,tgt_y]), dim=-1)
+        # print(last_dist)
+        fist_dist = torch.linalg.norm(torch.tensor([tgt_x,tgt_y]), dim=-1)
+
+        loss_dist = last_dist - fist_dist
+
+        # evaluate collision avoidance
+        loss_col = 0
+        for i in range(1, self.length):
+            err_x = dist_x[i] - rad_points[:,0]  #(360,)
+            err_y = dist_y[i] - rad_points[:,1]  #(360,)
+            err_dist = torch.sqrt(err_x**2 + err_y**2).min()  #(1,)
+            loss_col += torch.clamp(err_dist,max=0.2)
+            # loss_col += torch.cdist(torch.cat([dist_x[i],dist_y[i]]).unsqueeze(0),rad_points).min()  #(1,360)
+        # collision_dist = torch.cdist(traj, x[0:360])
+        # collision_dist = torch.clamp(collision_dist, max=0.2)
+        # collision_loss = collision_dist.sum()
+
+        # evaluate trajectory smoothness
+        angle_loss = torch.abs(traj[1:,1] - traj[0:-1,1]).sum()
+
+        # total loss
+        loss = loss_dist + loss_col + angle_loss
+        print(f'current loss: {loss}||dist_loss:{loss_dist}||collision:{loss_col}||angle:{angle_loss}')
+
+        # calculate local gradients and push local parameters to global
+        self.optimizer.zero_grad()
+        loss.backward()
+
+        shared_lock.acquire()
+        try:
+            global_agent.optimizer.zero_grad()
+            for lp, gp in zip(self.plan_net.parameters(), global_agent.plan_net.parameters()):
+                gp._grad = lp.grad
+            global_agent.optimizer.step()
+        finally:
+            shared_lock.release()
+        # pull global parameters
+        self.plan_net.load_state_dict(global_agent.plan_net.state_dict())
+
+        return
+
+    def learn_bk(self, global_agent, done, next_state, buffer_s, buffer_a, buffer_r, shared_lock):
         """
         Description: calculate loss and update global net gradients and local net weights
         args:

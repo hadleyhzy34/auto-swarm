@@ -28,7 +28,6 @@ class Agent(nn.Module):
         self.batch_size = 64
         self.device = device
         print(f'agent training device is loaded: {self.device}')
-        self.inc_count = 0
         
         # Buffer across all processes
         # self.memory = Buffer(self.memory_capacity, self.state_size, self.device)

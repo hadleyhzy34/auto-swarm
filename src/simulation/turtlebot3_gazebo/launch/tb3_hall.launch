@@ -5,15 +5,15 @@
   <arg name="z_pos" default="0.0"/>
 
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="world_name" value="$(find turtlebot3_gazebo)/worlds/turtlebot3_hallway.world"/>
+    <arg name="world_name" value="$(find turtlebot3_gazebo)/worlds/tb3_hall.world"/>
     <arg name="paused" value="false"/>
     <arg name="use_sim_time" value="true"/>
     <arg name="gui" value="true"/>
     <arg name="headless" value="false"/>
     <arg name="debug" value="false"/>
   </include>
- 
-  <!--include file="$(find tb3_move_base)/launch/move_base.launch"></include-->
+  
+  <include file="$(find tb3_move_base)/launch/move_base.launch"></include>
 
   <param name="robot_description" command="$(find xacro)/xacro --inorder $(find turtlebot3_description)/urdf/turtlebot3_$(arg model).urdf.xacro" />
 

@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.multiprocessing as mp
 from multiprocessing import Lock
 from concurrent.futures import process
-from agent.agent_dqn import Agent
+from agent.agent import Agent
 from agent.network import Buffer
 from env.env import Env
 from config.config import Config
@@ -26,9 +26,7 @@ def train(namespace, config, gAgent, shared_buffer,reward_shared_lock,g_lock):
 
     agent = Agent(config.Train.state_dim, config.Train.action_dim, config.Train.device)
     # scores, episodes = [], []
-    agent.inc_count = 0
-    file_count = 0
-    
+
     for e in range(config.Train.episodes):
         done = False
         state = env.reset()
@@ -37,44 +35,30 @@ def train(namespace, config, gAgent, shared_buffer,reward_shared_lock,g_lock):
         buffer_s = []
         buffer_r = []
         for t in range(agent.episode_step):
-            action = agent.choose_action(state)
+            traj = agent.path_planning(state)
+            action = agent.traj_follower(traj)
+            # print(action)
+
             next_state, reward, done = env.step(action)  # execute actions and wait until next scan(state)
             
-            buffer_r.append(reward)
-            buffer_s.append(state)
-            buffer_a.append(action)
-
-            score += reward
-            state = next_state
+            agent.learn(traj, state, gAgent, g_lock, env.goal_x, env.goal_y)
 
             if t >= 500:
                 # rospy.loginfo("Time out!!")
                 env.status = 'Time out'
                 done = True
             
-            if (t+1) % config.Train.update_global_iter == 0 or done:
-                # print(f'namespace: {namespace}, length of reward: {len(buffer_r[:pointer])}')
-                # agent.learn(gAgent, done, next_state, buffer_s, buffer_a, buffer_r, g_lock)
-                buffer_r,buffer_a,buffer_s = [],[],[]
+            # if (t+1) % config.Train.update_global_iter == 0 or done:
+            #     # print(f'namespace: {namespace}, length of reward: {len(buffer_r[:pointer])}')
+            #     agent.learn(gAgent, done, next_state, buffer_s, buffer_a, buffer_r, g_lock)
+            #     buffer_r,buffer_a,buffer_s = [],[],[]
             
             if done:
                 # scores.append(score)
                 # episodes.append(e)
                 print(f"||namespace: {namespace}||Ep: {e:3d}||score: {score:3.2f}||goal_dist: {env.goal_distance:.2f}||steps: {t:3d}||status: {env.status}")
                 break
-            
-            with open(namespace+'_'+str(file_count)+'dataset.csv','a') as f:
-                np.savetxt(f,np.concatenate([state, np.array([env.init_x, env.init_y, env.position.x, env.position.y, env.goal_x, env.goal_y])]),fmt='%1.4f',delimiter=',')
-                # f.write(",\n")
-                # f.write("\n")
-                # f.write(f"{np.concatenate([state,np.array([env.goal_x,env.goal_y])])}\n")
-                # f.write(f"{state}")
-                # f.write(f"{env.goal_x,env.goal_y}\n")
-            agent.inc_count += 1
-            if agent.inc_count % 250 == 0:
-                agent.inc_count = 0
-                file_count += 1
-
+        
         shared_buffer.push_reward(score, reward_shared_lock)
         writer.add_scalar("episodic reward", shared_buffer.shared_reward.mean(), global_step=torch.div(shared_buffer.pointer, config.num_processes, rounding_mode = 'floor'))
         # writer.add_scalar(namespace + "Training_loss", loss, global_step=global_step)

@@ -41,10 +41,6 @@ class Env():
         self.action_size = config.Train.action_dim
         self.goal_reached = False
 
-        # initial pose
-        self.init_x = 0.
-        self.init_y = 0.
-
         # reward weight
         self.r_wg = 2.5
         self.r_arrival = 500
@@ -75,11 +71,11 @@ class Env():
     def getState(self, scan):
         # import ipdb;ipdb.set_trace()
         scan_range = np.array(scan.ranges)
-        scan_range[np.isnan(scan_range)] = 10
-        scan_range[np.isinf(scan_range)] = 10
+        scan_range[np.isnan(scan_range)] = 3.5
+        scan_range[np.isinf(scan_range)] = 3.5
 
         # heading = self.heading
-        min_range = 0.2
+        min_range = 0.13
         done = False
         
         if min_range > scan_range.min() > 0:
@@ -125,12 +121,12 @@ class Env():
         return reward
        
     def step(self, action):
-        # max_angular_vel = 1.5
-        # ang_vel = ((self.action_size - 1)/2 - action) * max_angular_vel * 0.5
+        max_angular_vel = 1.5
+        ang_vel = ((self.action_size - 1)/2 - action) * max_angular_vel * 0.5
 
         vel_cmd = Twist()
-        vel_cmd.linear.x = action[0]
-        vel_cmd.angular.z = action[1]
+        vel_cmd.linear.x = 0.15
+        vel_cmd.angular.z = ang_vel
         self.pub_cmd_vel.publish(vel_cmd)
 
         # waiting more or less equal to 0.2 s until scan data received, stable behavior
@@ -173,8 +169,6 @@ class Env():
         state_msg.model_name = self.namespace
         # update initial position and goal positions
         state_msg.pose.position.x, state_msg.pose.position.y, self.goal_x, self.goal_y = self.random_pts_map()
-        self.init_x = state_msg.pose.position.x
-        self.init_y = state_msg.pose.position.y
         # state_msg.pose.position.z = 0.3
         state_msg.pose.orientation.x = 0
         state_msg.pose.orientation.y = 0
@@ -212,9 +206,6 @@ class Env():
         y2 = -5 * (self.rank // 4) + y2
 
         while np.linalg.norm([y2 - y1, x2 - x1]) < 0.5:
-            x2 = np.random.randint(5) + np.random.uniform(0.16, 1-0.16) # random initialize goal position
-            y2 = np.random.randint(5) + np.random.uniform(0.16, 1-0.16) # random initialize goal position
-
             x2 = -10 + (self.rank % 4) * 5 + x2
             y2 = -5 * (self.rank // 4) + y2
         

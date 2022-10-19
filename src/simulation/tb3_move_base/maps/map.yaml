@@ -1,4 +1,4 @@
-image: /home/hadley/Development/auto-swarm/src/simulation/turtlebot3_navigation/maps/map.pgm
+image: /home/hadley/map.pgm
 resolution: 0.050000
 origin: [-10.000000, -10.000000, 0.000000]
 negate: 0

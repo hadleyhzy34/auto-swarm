@@ -1,0 +1,17 @@
+<launch>
+  <arg name="map" default="map.yaml" />
+  <node name="map_server" pkg="map_server" type="map_server" args="$(find tb3_move_base)/maps/$(arg map)"/>
+
+  <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+    <rosparam command="delete" ns="move_base" />
+    <rosparam file="$(find tb3_move_base)/config/costmap_common_params.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find tb3_move_base)/config/costmap_common_params.yaml" command="load" ns="local_costmap" />
+    <rosparam file="$(find tb3_move_base)/config/local_costmap_params.yaml" command="load" />
+    <rosparam file="$(find tb3_move_base)/config/global_costmap_params.yaml" command="load" />
+    <rosparam file="$(find tb3_move_base)/config/base_local_planner.yaml" command="load" />
+    <rosparam file="$(find tb3_move_base)/config/move_base_params.yaml" command="load" />
+    <rosparam file="$(find tb3_move_base)/config/navfn_global_planner_params.yaml" command="load" />
+  </node>
+
+</launch>
+
