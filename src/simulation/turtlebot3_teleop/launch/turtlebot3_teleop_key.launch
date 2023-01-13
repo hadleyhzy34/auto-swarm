@@ -1,8 +1,9 @@
 <launch>
   <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
   <param name="model" value="$(arg model)"/>
+  <!-- <arg name="0_tb3"  default="tb3_0"/> -->
 
   <!-- turtlebot3_teleop_key already has its own built in velocity smoother -->
-  <node pkg="turtlebot3_teleop" type="turtlebot3_teleop_key" name="turtlebot3_teleop_keyboard"  output="screen">
+  <node pkg="turtlebot3_teleop" type="turtlebot3_teleop_key" name="turtlebot3_teleop_keyboard"  ns="tb3_0" output="screen">
   </node>
 </launch>

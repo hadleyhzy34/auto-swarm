@@ -54,7 +54,7 @@
     <arg name="world_name" value="$(find turtlebot3_gazebo)/worlds/tb3_multi_map_1.world"/>
     <arg name="paused" value="false"/>
     <arg name="use_sim_time" value="true"/>
-    <arg name="gui" value="false"/>
+    <arg name="gui" value="true"/>
     <arg name="headless" value="false"/>
     <arg name="debug" value="false"/>
   </include>  
@@ -68,6 +68,7 @@
     </node>
     
     <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-urdf -model $(arg 0_tb3) -x $(arg 0_tb3_x_pos) -y $(arg 0_tb3_y_pos) -z $(arg 0_tb3_z_pos) -Y $(arg 0_tb3_yaw) -param robot_description" />
+    <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find turtlebot3_gazebo)/rviz/turtlebot3_gazebo_model.rviz"/> -->
   </group>
 
   <group ns = "$(arg 1_tb3)">
