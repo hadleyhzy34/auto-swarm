@@ -107,22 +107,20 @@ class Agent(nn.Module):
         
         return img
         
-    def choose_action(self, x):
+    def choose_action(self, state):
         """
         Description:
         args:
-            x: numpy, (state_size,)n
+            state: numpy, (state_size,)n
         return:
             
         """
         # import ipdb;ipdb.set_trace()
-        x = torch.tensor(x,dtype=torch.float,device=self.device).unsqueeze(0) #(1, state_size)
-        if np.random.uniform() <= self.epsilon:
-            return np.random.randint(0, self.action_size)
-        else:
-            q_value = self.eval_net(x).detach()
-            action = q_value.max(1)[1].item()
-            return action
+        img = self.preprocess(state[:360])  #(224,224)
+        state = state[:4]  #(4,)
+        action = self.actor(img[None,:], state[None,:])[0]  #(2,)
+        
+        return action
     
     def store_transition(self, state, action, reward, next_state, done, shared_buffer, shared_lock):
         # import ipdb;ipdb.set_trace()
