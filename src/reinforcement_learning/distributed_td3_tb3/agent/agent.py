@@ -1,6 +1,7 @@
 import rospy
 import os
 import json
+import copy
 import numpy as np
 import random
 import time
@@ -11,6 +12,8 @@ import pdb
 import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
+from actor import Actor
+from critic import Q_Critic
 # from agent.network import DQN,Buffer
 # from env.env import Env
 from torch.utils.tensorboard import SummaryWriter 
@@ -34,12 +37,17 @@ class Agent(nn.Module):
         # self.memory = Buffer(self.memory_capacity, self.state_size, self.device)
         # self.share_memory = shared_buffer
 
-        # DQN model
-        # why using two q networks: https://ai.stackexchange.com/questions/22504/why-do-we-need-target-network-in-deep-q-learning
-        self.lr = 1e-3
-        # self.tgt_net = DQN(self.state_size, self.action_size, device = self.device)
-        # self.eval_net = DQN(self.state_size, self.action_size, device = self.device)
-        # self.optimizer = torch.optim.Adam(self.eval_net.parameters(), lr=self.lr)
+        self.a_lr = 1e-4
+        self.c_lr = 1e-4
+        
+        # td3 policy and critic network
+        self.actor = Actor(self.state_size,self.action_size).to(self.device)
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr = self.a_lr)
+        self.actor_target = copy.deepcopy(self.actor)
+        
+        self.q_critic = Q_Critic(self.state_size, self.action_size).to(device)
+        self.q_critic_optimizer = torch.optim.Adam(self.q_critic.parameters(), lr = self.c_lr)
+        self.q_critic_target = copy.deepcopy(self.q_critic)
 
         # target network update frequency
         self.target_replace_iter = 100
@@ -76,10 +84,10 @@ class Agent(nn.Module):
         rad_points[:,0] = torch.cos((torch.arange(0,360).to(self.device)) * torch.pi / 180) * data[0:360]
         rad_points[:,1] = torch.sin((torch.arange(0,360).to(self.device)) * torch.pi / 180) * data[0:360]
         
-        plt.figure()
-        plt.scatter(rad_points[:,0].cpu().numpy(),rad_points[:,1].cpu().numpy())
-        # plt.show()
-        plt.savefig('test1.png')
+        # plt.figure()
+        # plt.scatter(rad_points[:,0].cpu().numpy(),rad_points[:,1].cpu().numpy())
+        # # plt.show()
+        # plt.savefig('test1.png')
         
         #voxelize 2d lidar points
         rad_points[:,0] -= -3.5

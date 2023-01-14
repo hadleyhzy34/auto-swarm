@@ -74,8 +74,8 @@ class Env():
         scan_range = np.array(scan.ranges)
         # scan_range[np.isnan(scan_range)] = 3.5
         # scan_range[np.isinf(scan_range)] = 3.5
-        scan_range[np.isinf(scan_range)] = 0.
-        scan_range[np.isnan(scan_range)] = 0.
+        scan_range[np.isinf(scan_range)] = 10.
+        scan_range[np.isnan(scan_range)] = 10.
 
         # heading = self.heading
         min_range = 0.13
