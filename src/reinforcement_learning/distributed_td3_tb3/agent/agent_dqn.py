@@ -5,12 +5,15 @@ import numpy as np
 import random
 import time
 import sys
+import pdb
 from collections import deque
 from std_msgs.msg import Float32MultiArray
 import torch
 import torch.nn as nn
+import matplotlib.pyplot as plt
 from agent.network import DQN,Buffer
 from env.env import Env
+from PIL import Image
 from torch.utils.tensorboard import SummaryWriter 
 
 class Agent(nn.Module):
@@ -23,7 +26,7 @@ class Agent(nn.Module):
         self.gamma = 0.99
         self.epsilon = 1.0
         self.epsilon_decay = 0.99
-        self.epsilon_min = 0.05
+        self.epsilon_min = 0.01
         self.batch_size = 256
         self.device = device
         print(f'agent training device is loaded: {self.device}')
@@ -58,6 +61,55 @@ class Agent(nn.Module):
         # env
         # self.env = Env(self.action_size)
 
+    def preprocess(self, data):
+        """"
+        description: lidar data to grid image
+        args:
+            data: (state_size,), numpy.floatTensor
+        return:
+            map: (224,224), torch.floatTensor
+        """
+        # pdb.set_trace()
+        data = torch.tensor(data,dtype=torch.float,device=self.device)  #(batch_size,state_size,)
+        # b = data.shape[0]
+        
+        rad_points = torch.zeros((360, 2),device=self.device)  #(360,2)
+        rad_points[:,0] = torch.cos((torch.arange(0,360).to(self.device)) * torch.pi / 180) * data[0:360]
+        rad_points[:,1] = torch.sin((torch.arange(0,360).to(self.device)) * torch.pi / 180) * data[0:360]
+        
+        # plt.figure()
+        # plt.scatter(rad_points[:,0].cpu().numpy(),rad_points[:,1].cpu().numpy())
+        # plt.savefig('test1.png')
+        # plt.close()
+        # plt.show()
+        
+        #voxelize 2d lidar points
+        rad_points[:,0] -= -3.5
+        rad_points[:,1] = 3.5 - rad_points[:,1]
+        rad_points = rad_points.div((3.5*2)/224,rounding_mode='floor').long()
+        print(f'check here2')
+         
+        # img = torch.zeros((224,224),device = self.device)  #(224,224)
+        img = torch.zeros((224,224))  #(224,224)
+        print(f'check here3')
+        img[rad_points[:,0],rad_points[:,1]] = 1.
+        
+        # remove center point
+        print(f'check here4')
+        img[112,112] = 0.
+        
+        print(f'check here5')
+        plt.figure()
+        plt.imshow(img.numpy())
+        # plt.savefig('test2.png')
+        plt.show()
+        print(f'check here')
+        # pdb.set_trace()
+        img = Image.fromarray(img.cpu().numpy())
+        img.save("test2.jpeg")
+        
+        return img
+    
     def choose_action(self, x):
         """
         Description:
@@ -66,6 +118,7 @@ class Agent(nn.Module):
         return:
             
         """
+        # self.preprocess(x[:360])
         # import ipdb;ipdb.set_trace()
         x = torch.tensor(x,dtype=torch.float,device=self.device).unsqueeze(0) #(1, state_size)
         if np.random.uniform() <= self.epsilon:

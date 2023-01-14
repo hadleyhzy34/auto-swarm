@@ -70,6 +70,12 @@ def train(namespace, config, gAgent, shared_buffer, shared_lock, reward_shared_l
         if agent.epsilon > agent.epsilon_min:
             agent.epsilon *= agent.epsilon_decay
         
+        # curriculum learning by gradually increasing goal distance
+        if (e+1) % 100 == 0:
+            if env.dist_range < 4.:
+                env.dist_range += 0.1
+                print(f"||namespace: {namespace}||Ep: {e:3d}||score: {score:3.2f}||dist_range: {env.dist_range}")
+        
         # update local agent from global agent for each episode
         agent.load_state_dict(gAgent.to(Config.Train.device).state_dict())
 

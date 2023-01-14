@@ -112,7 +112,8 @@ class DQN(nn.Module):
         """
         # normalize lidar data
         # print(f's:{s.device},model:{self.backbone}')
-        scan_embedding = self.backbone(s[:,:360]/3.5)
+        # scan_embedding = self.backbone(s[:,:360]/3.5)
+        scan_embedding = self.backbone(s[:,:360])
         total_embedding = torch.cat([scan_embedding, s[:,360:]],dim=1)
         # print(f'total_embedding shape is:{total_embedding.shape}')
         return self.model(total_embedding)

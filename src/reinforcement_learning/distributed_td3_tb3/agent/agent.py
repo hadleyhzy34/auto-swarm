@@ -7,10 +7,12 @@ import time
 import sys
 from collections import deque
 from std_msgs.msg import Float32MultiArray
+import pdb
 import torch
 import torch.nn as nn
-from agent.network import DQN,Buffer
-from env.env import Env
+import matplotlib.pyplot as plt
+# from agent.network import DQN,Buffer
+# from env.env import Env
 from torch.utils.tensorboard import SummaryWriter 
 
 class Agent(nn.Module):
@@ -23,8 +25,8 @@ class Agent(nn.Module):
         self.gamma = 0.99
         self.epsilon = 1.0
         self.epsilon_decay = 0.99
-        self.epsilon_min = 0.05
-        self.batch_size = 64
+        self.epsilon_min = 0.01
+        self.batch_size = 256
         self.device = device
         print(f'agent training device is loaded: {self.device}')
         
@@ -35,9 +37,9 @@ class Agent(nn.Module):
         # DQN model
         # why using two q networks: https://ai.stackexchange.com/questions/22504/why-do-we-need-target-network-in-deep-q-learning
         self.lr = 1e-3
-        self.tgt_net = DQN(self.state_size, self.action_size, device = self.device)
-        self.eval_net = DQN(self.state_size, self.action_size, device = self.device)
-        self.optimizer = torch.optim.Adam(self.eval_net.parameters(), lr=self.lr)
+        # self.tgt_net = DQN(self.state_size, self.action_size, device = self.device)
+        # self.eval_net = DQN(self.state_size, self.action_size, device = self.device)
+        # self.optimizer = torch.optim.Adam(self.eval_net.parameters(), lr=self.lr)
 
         # target network update frequency
         self.target_replace_iter = 100
@@ -58,6 +60,45 @@ class Agent(nn.Module):
         # env
         # self.env = Env(self.action_size)
 
+    def preprocess(self, data):
+        """"
+        description: lidar data to grid image
+        args:
+            data: (state_size,)
+        return:
+            map: (224,224), torch.floatTensor
+        """
+        # pdb.set_trace()
+        data = torch.tensor(data,dtype=torch.float,device=self.device)  #(batch_size,state_size,)
+        # b = data.shape[0]
+        
+        rad_points = torch.zeros((360, 2),device=self.device)  #(360,2)
+        rad_points[:,0] = torch.cos((torch.arange(0,360).to(self.device)) * torch.pi / 180) * data[0:360]
+        rad_points[:,1] = torch.sin((torch.arange(0,360).to(self.device)) * torch.pi / 180) * data[0:360]
+        
+        plt.figure()
+        plt.scatter(rad_points[:,0].cpu().numpy(),rad_points[:,1].cpu().numpy())
+        # plt.show()
+        plt.savefig('test1.png')
+        
+        #voxelize 2d lidar points
+        rad_points[:,0] -= -3.5
+        rad_points[:,1] = 3.5 - rad_points[:,1]
+        rad_points = rad_points.div((3.5*2)/224,rounding_mode='floor').long()
+         
+        img = torch.zeros((224,224),device = self.device)  #(224,224)
+        img[rad_points[:,0],rad_points[:,1]] = 1.
+        
+        # remove center point
+        img[112,112] = 0.
+        
+        # plt.figure()
+        # plt.imshow(img.numpy())
+        # # plt.show()
+        # plt.savefig('test2.png')
+        
+        return img
+        
     def choose_action(self, x):
         """
         Description:
@@ -116,3 +157,10 @@ class Agent(nn.Module):
         self.optimizer.step()
 
         return loss
+
+if __name__ == '__main__':
+    agent = Agent(370,2)
+    lidar_data = np.random.uniform(low=0.,high=3.5,size=(1,360,))  #(1,360,)
+    lidar_data[0,100:200] = 1.
+    map = agent.preprocess(lidar_data)
+    

@@ -40,7 +40,7 @@ class Env():
         self.theta = np.zeros(2) # [yaw, omega]
         self.action_size = config.Train.action_dim
         self.goal_reached = False
-        self.dist_range = 3.5
+        self.dist_range = 0.5
 
         # reward weight
         self.r_wg = 2.5
@@ -72,8 +72,10 @@ class Env():
     def getState(self, scan):
         # import ipdb;ipdb.set_trace()
         scan_range = np.array(scan.ranges)
-        scan_range[np.isnan(scan_range)] = 3.5
-        scan_range[np.isinf(scan_range)] = 3.5
+        # scan_range[np.isnan(scan_range)] = 3.5
+        # scan_range[np.isinf(scan_range)] = 3.5
+        scan_range[np.isinf(scan_range)] = 0.
+        scan_range[np.isnan(scan_range)] = 0.
 
         # heading = self.heading
         min_range = 0.13
@@ -82,13 +84,20 @@ class Env():
         if min_range > scan_range.min() > 0:
             done = True # done because of collision
 
-        goal_distance = np.array([self.goal_x - self.position.x, self.goal_y - self.position.y])
-        if np.linalg.norm(goal_distance) < 0.1:
+        goal_pos = np.array([self.goal_x - self.position.x, self.goal_y - self.position.y])
+        if np.linalg.norm(goal_pos) < 0.1:
             self.goal_reached = True
             done = True # done because of goal reached
 
-        self.goal_dir = goal_distance / np.linalg.norm(goal_distance)
-        return np.concatenate((scan_range, self.theta, self.goal_dir), axis=0), done
+        # self.goal_dir = goal_distance / np.linalg.norm(goal_distance)
+        # self.goal_dir = goal_distance
+        
+        # relative goal position based on robot base frame
+        yaw = self.theta[0]
+        rot = np.array([[np.cos(yaw),np.sin(yaw)],[-np.sin(yaw),np.cos(yaw)]])  #(2,2)
+        goal_pos = np.matmul(rot, goal_pos[:,None])[:,0]  #(2,)
+        
+        return np.concatenate((scan_range, self.theta, goal_pos), axis=0), done
 
     def setReward(self, state, done, action):
         """
@@ -113,9 +122,15 @@ class Env():
                 self.status = 'Hit'
         else:
             goal_distance = np.linalg.norm([self.goal_x - self.position.x, self.goal_y - self.position.y])
-            # reward += self.r_wg * (goal_distance - self.goal_distance) #wrong!!! previous_distance - current_distance
-            reward += self.r_wg * (self.goal_distance - goal_distance)
-            self.goal_distance = goal_distance
+            
+            # # goal distance reward
+            # reward += self.r_wg * (self.goal_distance - goal_distance)
+            # self.goal_distance = goal_distance
+            
+            # punish and accumulate number of steps
+            reward -= .5
+            
+            # punish large angular acceleration
             if self.theta[1] > 0.7 or self.theta[1] < -0.7:
                 reward += self.r_rotation * self.theta[1]
 
@@ -233,7 +248,7 @@ class Env():
         y2 = -5 * (self.rank // 4) + y2
         
         dist = np.linalg.norm([y2 - y1, x2 - x1])
-        while dist < 0.3 or dist > self.dist_range:
+        while dist < self.dist_range - 0.2 or dist > self.dist_range:
         # while np.linalg.norm([y2 - y1, x2 - x1]) < 0.5:
             x2 = -10 + (self.rank % 4) * 5 + np.random.randint(5) + np.random.uniform(0.16, 1-0.16) # random initialize goal position
             y2 = -5 * (self.rank // 4) + np.random.randint(5) + np.random.uniform(0.16, 1-0.16) # random initialize goal position
