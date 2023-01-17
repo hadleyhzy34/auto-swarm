@@ -10,6 +10,7 @@ from collections import deque
 from std_msgs.msg import Float32MultiArray
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import matplotlib.pyplot as plt
 from agent.network import DQN,Buffer
 from env.env import Env
@@ -37,9 +38,12 @@ class Agent(nn.Module):
 
         # DQN model
         # why using two q networks: https://ai.stackexchange.com/questions/22504/why-do-we-need-target-network-in-deep-q-learning
+        self.tau = 1e-3
         self.lr = 1e-3
         self.tgt_net = DQN(self.state_size, self.action_size, device = self.device)
         self.eval_net = DQN(self.state_size, self.action_size, device = self.device)
+        self.tgt_net.load_state_dict(self.eval_net.state_dict())
+        self.tgt_net.eval()
         self.optimizer = torch.optim.Adam(self.eval_net.parameters(), lr=self.lr)
 
         # target network update frequency
@@ -75,7 +79,10 @@ class Agent(nn.Module):
         if np.random.uniform() <= self.epsilon:
             return np.random.randint(0, self.action_size)
         else:
-            q_value = self.eval_net(x).detach()
+            self.eval_net.eval()
+            with torch.no_grad():
+                q_value = self.eval_net(x).detach()
+            self.eval_net.train()
             action = q_value.max(1)[1].item()
             return action
     
@@ -101,22 +108,47 @@ class Agent(nn.Module):
         mini_batch = shared_buffer.sample(self.batch_size).to(self.device)
         # mini_batch = self.memory.sample(self.batch_size)
         states = mini_batch[:,:self.state_size]
-        next_states = mini_batch[:,self.state_size+3:]
+        next_states = mini_batch[:,self.state_size+2:-1]
         rewards = mini_batch[:,self.state_size+1]
+        dones = mini_batch[:,-1]
 
+        # print(f'mini_batch shape: {mini_batch.shape}, next_states: {next_states.shape}')
         # actions to int
         actions = mini_batch[:,self.state_size].to(dtype=int)
         # print(f'action:{actions.device},states:{states.device},self.device:{self.device}')
         # print(f'res:{self.eval_net.to(self.device)(states).device}')
-
-        #Note to use .to() method since eval and tgt net changed back to cpu method as actor
-        q_eval = self.eval_net.to(self.device)(states).gather(1,actions.unsqueeze(-1)).squeeze(-1)
-        q_next = self.tgt_net.to(self.device)(next_states).detach()
-        q_target = rewards + self.gamma * q_next.max(1)[0]
-        loss = self.loss(q_eval, q_target)
+        
+        with torch.no_grad():
+            q_tgt_nxt = self.tgt_net.to(self.device)(next_states).detach().max(1)[0]
+            q_tgt = rewards + self.gamma * q_tgt_nxt * (1 - dones)
+        # print(f'q_tgt shape: {q_tgt.shape}')
+        
+        q_a_s = self.eval_net.to(self.device)(states)  #(b,action_size)
+        q_exp = q_a_s.gather(1,actions.unsqueeze(-1)).squeeze(-1)
+        # print(f'q_a_s shape: {q_a_s.shape}, q_exp shape: {q_exp.shape}')
+        
+        cql_loss = torch.logsumexp(q_a_s, dim = 1).mean() - q_a_s.mean()
+        
+        bellman_error = F.mse_loss(q_exp, q_tgt)
+        
+        loss = cql_loss + 0.5 * bellman_error
+        
+        # #Note to use .to() method since eval and tgt net changed back to cpu method as actor
+        # q_eval = self.eval_net.to(self.device)(states).gather(1,actions.unsqueeze(-1)).squeeze(-1)
+        # q_next = self.tgt_net.to(self.device)(next_states).detach()
+        # q_target = rewards + self.gamma * q_next.max(1)[0]
+        # loss = self.loss(q_eval, q_target)
 
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-
-        return loss.detach()
+        
+        # update target network
+        self.soft_update(self.eval_net, self.tgt_net)
+        
+        return loss.detach(), cql_loss.detach(), bellman_error.detach()
+        # return loss.detach()
+    
+    def soft_update(self, local_model, target_model):
+        for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
+            target_param.data.copy_(self.tau * local_param.data + (1. - self.tau) * target_param.data)

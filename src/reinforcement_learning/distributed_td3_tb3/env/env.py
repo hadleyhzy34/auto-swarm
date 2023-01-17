@@ -85,7 +85,9 @@ class Env():
             done = True # done because of collision
 
         goal_pos = np.array([self.goal_x - self.position.x, self.goal_y - self.position.y])
-        if np.linalg.norm(goal_pos) < 0.1:
+        self.goal_distance = np.linalg.norm(goal_pos)
+        
+        if self.goal_distance < 0.1:
             self.goal_reached = True
             done = True # done because of goal reached
 
@@ -128,7 +130,7 @@ class Env():
             # self.goal_distance = goal_distance
             
             # punish and accumulate number of steps
-            reward -= .5
+            reward -= .1
             
             # punish large angular acceleration
             if self.theta[1] > 0.7 or self.theta[1] < -0.7:

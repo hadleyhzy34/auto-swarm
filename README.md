@@ -10,6 +10,15 @@ catkin_make -j$(nproc)
 source devel/setup.bash
 ```
 
+## Installation Issues:
+
+```
+sudo apt-get install libsdl-dev
+sudo apt-get install libsdl-image1.2-dev
+sudo apt-get install ros-noetic-navigation
+sudo apt-get install ros-noetic-tf2-msgs
+```
+
 # Environment
 
 ROS --version 18.04, 20.04
