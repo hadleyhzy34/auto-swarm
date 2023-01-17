@@ -1,11 +1,12 @@
 import torch
-import torch.nn
+import torch.nn as nn
 import torch.nn.functional as F
 
 class Q_Critic(nn.Module):
-	def __init__(self, state_dim, action_dim, net_width):
+	def __init__(self, state_dim, action_dim):
 		super(Q_Critic, self).__init__()
 
+		net_width = 2 * (state_dim + action_dim)
 		# Q1 architecture
 		self.l1 = nn.Linear(state_dim + action_dim, net_width)  #没有先提取特征
 		self.l2 = nn.Linear(net_width, net_width)

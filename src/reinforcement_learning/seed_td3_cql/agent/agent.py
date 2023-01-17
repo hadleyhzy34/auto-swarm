@@ -1,4 +1,4 @@
-import rospy
+# import rospy
 import os
 import json
 import copy
@@ -7,10 +7,10 @@ import random
 import time
 import sys
 from collections import deque
-from std_msgs.msg import Float32MultiArray
 import pdb
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import matplotlib.pyplot as plt
 from actor import Actor
 from critic import Q_Critic
@@ -77,9 +77,9 @@ class Agent(nn.Module):
             map: (224,224), torch.floatTensor
         """
         # pdb.set_trace()
-        data = torch.tensor(data,dtype=torch.float,device=self.device)  #(batch_size,state_size,)
-        # b = data.shape[0]
+        data = torch.tensor(data,dtype=torch.float,device=self.device)[0]  #(batch_size,scan_size,)
         
+        # pdb.set_trace()
         rad_points = torch.zeros((360, 2),device=self.device)  #(360,2)
         rad_points[:,0] = torch.cos((torch.arange(0,360).to(self.device)) * torch.pi / 180) * data[0:360]
         rad_points[:,1] = torch.sin((torch.arange(0,360).to(self.device)) * torch.pi / 180) * data[0:360]
@@ -111,14 +111,16 @@ class Agent(nn.Module):
         """
         Description:
         args:
-            state: numpy, (state_size,)n
+            state: numpy, (b,state_size,)n
         return:
             
         """
         # import ipdb;ipdb.set_trace()
-        img = self.preprocess(state[:360])  #(224,224)
-        state = state[:4]  #(4,)
-        action = self.actor(img[None,:], state[None,:])[0]  #(2,)
+        img = self.preprocess(state[:,:360])  #(224,224)
+        # pdb.set_trace()
+        state = torch.tensor(state, dtype=torch.float, device=self.device)
+        state = state[:,-4:]  #(b,4)
+        action = self.actor(img[None,:], state)[0]  #(2,)
         
         return action
     
@@ -132,41 +134,60 @@ class Agent(nn.Module):
         
         # print(f'state:{state.shape,state.dtype}, action:{action.shape,action.dtype},reward:{reward.shape,reward.dtype},next_state:{next_state.shape,next_state.dtype},done:{done.shape,done.dtype}')
         shared_buffer.push(state, action, reward, next_state, done, shared_lock)
-
+    
     def learn(self, shared_buffer):
-        # import ipdb;ipdb.set_trace()
-        # update target network 
-        if self.learn_step_counter % self.target_replace_iter == 0:
-            self.tgt_net.load_state_dict(self.eval_net.state_dict())
-        self.learn_step_counter += 1
-
         # buffer sampling
         mini_batch = shared_buffer.sample(self.batch_size).to(self.device)
         # mini_batch = self.memory.sample(self.batch_size)
         states = mini_batch[:,:self.state_size]
-        next_states = mini_batch[:,self.state_size+3:]
+        next_states = mini_batch[:,self.state_size+2:-1]
         rewards = mini_batch[:,self.state_size+1]
+        dones = mini_batch[:,-1]
 
+        # print(f'mini_batch shape: {mini_batch.shape}, next_states: {next_states.shape}')
         # actions to int
         actions = mini_batch[:,self.state_size].to(dtype=int)
-        # print(f'action:{actions.device},states:{states.device},self.device:{self.device}')
-        # print(f'res:{self.eval_net.to(self.device)(states).device}')
+        
+        self.delay_counter += 1
+        with torch.no_grad():
+            noise = (torch.randn_like(actions) * self.policy_noise).clamp(-self.noise_clip, self.noise_clip)
+            smoothed_target_a = (
+					self.actor_target(next_states) + noise  # Noisy on target action
+			).clamp(-self.max_action, self.max_action)
+        
+        # Compute the target Q value
+        target_Q1, target_Q2 = self.q_critic_target(next_states, smoothed_target_a)
+        target_Q = torch.min(target_Q1, target_Q2)
 
-        #Note to use .to() method since eval and tgt net changed back to cpu method as actor
-        q_eval = self.eval_net.to(self.device)(states).gather(1,actions.unsqueeze(-1)).squeeze(-1)
-        q_next = self.tgt_net.to(self.device)(next_states).detach()
-        q_target = rewards + self.gamma * q_next.max(1)[0]
-        loss = self.loss(q_eval, q_target)
-
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-
-        return loss
+        target_Q = rewards + self.gamma * target_Q * (1 - dones)
+        
+        # Get current Q estimates
+        current_Q1, current_Q2 = self.q_critic(states, actions)
+        
+        # compute critic loss
+        q_loss = F.mse_loss(current_Q1, target_Q) + F.mse_loss(current_Q2, target_Q)
+        
+        # Optimize the q_critic
+        self.q_critic_optimizer.zero_grad()
+        q_loss.backward()
+        self.q_critic_optimizer.step()
+        
+        if self.delay_counter == self.delay_freq:
+			# Update Actor
+            a_loss = - self.q_critic.Q1(states, self.actor(states)).mean()
+            self.actor_optimizer.zero_grad()
+            a_loss.backward()
+            self.actor_optimizer.step()
+        
+            # Update the frozen target models
+            for param, target_param in zip(self.q_critic.parameters(), self.q_critic_target.parameters()):
+                target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+            for param, target_param in zip(self.actor.parameters(), self.actor_target.parameters()):
+                target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+            self.delay_counter = -1
 
 if __name__ == '__main__':
-    agent = Agent(370,2)
-    lidar_data = np.random.uniform(low=0.,high=3.5,size=(1,360,))  #(1,360,)
+    agent = Agent(364,2)
+    lidar_data = np.random.uniform(low=0.,high=3.5,size=(1,364,))  #(1,360,)
     lidar_data[0,100:200] = 1.
-    map = agent.preprocess(lidar_data)
-    
+    test = agent.choose_action(lidar_data)    
