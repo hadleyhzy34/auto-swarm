@@ -72,17 +72,19 @@ class Env():
     def getState(self, scan):
         # import ipdb;ipdb.set_trace()
         scan_range = np.array(scan.ranges)
-        # scan_range[np.isnan(scan_range)] = 3.5
-        # scan_range[np.isinf(scan_range)] = 3.5
+        scan_range[np.isnan(scan_range)] = 0.
         scan_range[np.isinf(scan_range)] = 10.
-        scan_range[np.isnan(scan_range)] = 10.
 
         # heading = self.heading
         min_range = 0.13
         done = False
         
-        if min_range > scan_range.min() > 0:
+        print(f'scan_range: {scan_range.min()}')
+        if min_range > scan_range.min():
+            print(f'collision')
             done = True # done because of collision
+
+        scan_range[scan_range==10] = 0.
 
         goal_pos = np.array([self.goal_x - self.position.x, self.goal_y - self.position.y])
         self.goal_distance = np.linalg.norm(goal_pos)
@@ -139,12 +141,12 @@ class Env():
         return reward
        
     def step(self, action):
-        max_angular_vel = 1.5
-        ang_vel = ((self.action_size - 1)/2 - action) * max_angular_vel * 0.5
+        # max_angular_vel = 1.5
+        # ang_vel = ((self.action_size - 1)/2 - action) * max_angular_vel * 0.5
 
         vel_cmd = Twist()
-        vel_cmd.linear.x = 0.15
-        vel_cmd.angular.z = ang_vel
+        vel_cmd.linear.x = action[0]
+        vel_cmd.angular.z = action[1]
         self.pub_cmd_vel.publish(vel_cmd)
 
         # waiting more or less equal to 0.2 s until scan data received, stable behavior

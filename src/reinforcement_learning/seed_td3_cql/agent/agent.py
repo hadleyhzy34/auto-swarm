@@ -12,8 +12,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
-from actor import Actor
-from critic import Q_Critic
+from agent.actor import Actor
+from agent.critic import Q_Critic
 # from agent.network import DQN,Buffer
 # from env.env import Env
 from torch.utils.tensorboard import SummaryWriter 
@@ -40,14 +40,24 @@ class Agent(nn.Module):
         self.a_lr = 1e-4
         self.c_lr = 1e-4
         
+        print(f'check here actor')
         # td3 policy and critic network
         self.actor = Actor(self.state_size,self.action_size).to(self.device)
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr = self.a_lr)
-        self.actor_target = copy.deepcopy(self.actor)
+        # self.actor_target = copy.deepcopy(self.actor)
+        print(f'check actor network')
+        # pdb.set_trace()
+        self.actor_target = Actor(self.state_size,self.action_size).to(self.device)
+        # self.actor_target.load_state_dict(self.actor.state_dict())
+        # self.actor_target.eval()
         
-        self.q_critic = Q_Critic(self.state_size, self.action_size).to(device)
+        print(f'check agent critic')
+        self.q_critic = Q_Critic(self.state_size, self.action_size).to(self.device)
         self.q_critic_optimizer = torch.optim.Adam(self.q_critic.parameters(), lr = self.c_lr)
-        self.q_critic_target = copy.deepcopy(self.q_critic)
+        # self.q_critic_target = copy.deepcopy(self.q_critic)
+        self.q_critic_target = Q_Critic(self.state_size, self.action_size).to(self.device)
+        # self.q_critic_target.load_state_dict(self.q_critic.state_dict())
+        # self.q_critic_target.eval()
 
         # target network update frequency
         self.target_replace_iter = 100
@@ -67,17 +77,21 @@ class Agent(nn.Module):
 
         # env
         # self.env = Env(self.action_size)
+        self.action_range_0 = 0.1
+        self.action_range_1 = 0.75
+        
+        self.image = torch.empty((224,224)).to(self.device)  #(224,224)
 
     def preprocess(self, data):
         """"
         description: lidar data to grid image
         args:
-            data: (state_size,)
+            data: (1,state_size,)
         return:
             map: (224,224), torch.floatTensor
         """
         # pdb.set_trace()
-        data = torch.tensor(data,dtype=torch.float,device=self.device)[0]  #(batch_size,scan_size,)
+        data = torch.tensor(data,dtype=torch.float,device=self.device)[0]  #(scan_size,)
         
         # pdb.set_trace()
         rad_points = torch.zeros((360, 2),device=self.device)  #(360,2)
@@ -88,46 +102,55 @@ class Agent(nn.Module):
         # plt.scatter(rad_points[:,0].cpu().numpy(),rad_points[:,1].cpu().numpy())
         # # plt.show()
         # plt.savefig('test1.png')
-        
+        print(f'check rad_points here')
         #voxelize 2d lidar points
         rad_points[:,0] -= -3.5
         rad_points[:,1] = 3.5 - rad_points[:,1]
-        rad_points = rad_points.div((3.5*2)/224,rounding_mode='floor').long()
-         
-        img = torch.zeros((224,224),device = self.device)  #(224,224)
-        img[rad_points[:,0],rad_points[:,1]] = 1.
+        rad_points = rad_points.div((3.5*2)/224,rounding_mode='trunc').long()
+        print(f'check rad after assign: {rad_points.shape}')
+
+        # pdb.set_trace()
+        self.image[:] = 0.
+        print(f'check img after assign: {self.image.shape}')
+        self.image[rad_points[:,0],rad_points[:,1]] = 1.
         
         # remove center point
-        img[112,112] = 0.
-        
+        self.image[112,112] = 0.
+        print(f'check img here')
         # plt.figure()
         # plt.imshow(img.numpy())
         # # plt.show()
         # plt.savefig('test2.png')
         
-        return img
+        return self.image
         
     def choose_action(self, state):
         """
         Description:
         args:
-            state: numpy, (b,state_size,)n
+            state: numpy, (state_size,)
         return:
             
         """
         # import ipdb;ipdb.set_trace()
-        img = self.preprocess(state[:,:360])  #(224,224)
+        print(f'check before preprocess, {state.shape}')
+        img = self.preprocess(state[None,:360])  #(224,224)
         # pdb.set_trace()
+        print(f'check after preprocess')
         state = torch.tensor(state, dtype=torch.float, device=self.device)
-        state = state[:,-4:]  #(b,4)
+        state = state[None,-4:]  #(1,4)
         action = self.actor(img[None,:], state)[0]  #(2,)
+        action = torch.tanh(action[None,:])[0]  #(-1,+1)
+        action[0] = action[0] * self.action_range_0 + self.action_range_0
+        action[1] = action[1] * self.action_range_1
         
-        return action
+        return np.array(action.detach().cpu())
     
     def store_transition(self, state, action, reward, next_state, done, shared_buffer, shared_lock):
         # import ipdb;ipdb.set_trace()
+        # pdb.set_trace()
         state = torch.tensor(state, device = self.device)
-        action = torch.tensor(action, device = self.device).unsqueeze(0) #(1,)
+        action = torch.tensor(action, device = self.device) #(action_dim,)
         reward = torch.tensor(reward, device = self.device).unsqueeze(0)
         next_state = torch.tensor(next_state, device = self.device)
         done = torch.tensor(done, device = self.device).unsqueeze(0)

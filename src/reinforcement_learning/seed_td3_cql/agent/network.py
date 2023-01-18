@@ -19,11 +19,11 @@ def weights_init_(m):
 
 ################### buffer #############################
 class Buffer(nn.Module):
-    def __init__(self, capacity, state_dim, device = torch.device('cpu')):
+    def __init__(self, capacity, state_dim, action_dim, device = torch.device('cpu')):
         super().__init__()
         self.capacity = capacity
         self.device = device
-        self.memory = torch.empty((self.capacity, state_dim + 1 + 1 + state_dim + 1),device=self.device)
+        self.memory = torch.empty((self.capacity, state_dim + action_dim + 1 + state_dim + 1),device=self.device)
         # share this memory across multiprocessing
         self.memory.share_memory_()
         # share pointer across multi processes

@@ -11,7 +11,7 @@ import torch.nn as nn
 import torch.multiprocessing as mp
 from multiprocessing import Lock
 from concurrent.futures import process
-from agent.agent_dqn import Agent
+from agent.agent import Agent
 from agent.network import Buffer
 from env.env import Env
 from config.config import Config
@@ -29,15 +29,18 @@ def train(namespace, config, gAgent, shared_buffer, shared_lock, reward_shared_l
     agent = Agent(config.Train.state_dim, config.Train.action_dim, config.Train.device)
     scores, episodes = [], []
 
+    print(f'after agent initialization')
     for e in range(config.Train.episodes):
         done = False
         state = env.reset()
         score = 0
+        print(f'check before eps')
         for t in range(agent.episode_step):
             action = agent.choose_action(state)
 
+            print(f'check before action')
             next_state, reward, done = env.step(action)  # execute actions and wait until next scan(state)
-
+            print(f'check after action')
             agent.store_transition(state, action, reward, next_state, done, shared_buffer, shared_lock)
             
             # if namespace[-1] == '0':
@@ -108,7 +111,7 @@ if __name__ == '__main__':
     # writer = SummaryWriter('runs/scalar_example')
     # import ipdb;ipdb.set_trace()
     # shared_buffer across processes
-    shared_buffer = Buffer(Config.Memory.capacity, Config.Train.state_dim, Config.Train.device)
+    shared_buffer = Buffer(Config.Memory.capacity, Config.Train.state_dim, Config.Train.action_dim, Config.Train.device)
     shared_buffer.share_memory()
 
     shared_lock = Lock()
@@ -129,6 +132,8 @@ if __name__ == '__main__':
         # p.start()
         # processes.append(p)
     
+    # train(Config.namespace+str(0), Config, gAgent.to(Config.Train.device), shared_buffer, shared_lock, reward_shared_lock)
+
     ctx = mp.get_context("spawn")
     for rank in range(num_processes+1):
         if rank != num_processes:

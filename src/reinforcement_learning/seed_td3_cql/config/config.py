@@ -15,7 +15,7 @@ Config.Memory.capacity = 2000
 # training parameters
 Config.Train.batch_size = 128
 Config.Train.state_dim = 364
-Config.Train.action_dim = 5
+Config.Train.action_dim = 2
 Config.Train.lr = 1e-3
 # Config.Train.device = torch.device('cuda')
 Config.Train.device = torch.device('cpu')

@@ -24,6 +24,7 @@ class Actor(nn.Module):
         self.state_embedding = nn.Linear(state_dim - 360, self.state_dim)
         self.to_q = nn.Linear(self.state_dim, self.state_dim * self.heads, bias=False)
         
+        print(f'check actor init here')
         # image to path
         self.to_patch_embedding = nn.Sequential(
             Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1 = patch_height, p2 = patch_width),
@@ -39,6 +40,7 @@ class Actor(nn.Module):
             nn.LeakyReLU(),
             nn.Linear(self.state_dim, self.action_dim)
         )
+        print(f'check actor end here')
     
     def forward(self, grid, state):
         """description: actor policy
