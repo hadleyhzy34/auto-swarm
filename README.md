@@ -4,7 +4,7 @@ You can just execute the following commands one by one.
 ```
 sudo apt-get install libarmadillo-dev
 sudo apt-get install ros-<distro>-gazebo-ros
-git clone -b stable https://github.com/hadleyhzy34/auto-swarm.git
+git clone -b new https://github.com/hadleyhzy34/auto-swarm.git
 cd auto-swarm
 catkin_make -j$(nproc)
 source devel/setup.bash
