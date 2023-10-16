@@ -12,7 +12,11 @@ source devel/setup.bash
 
 ## Installation Issues:
 
-make sure catking_pkg python package is installed and python path is set
+* make sure catking_pkg python package is installed and python path is set
+* export TURTLEBOT3_MODEL=burger
+* pip install ros_pkg
+* pip install defusedxml
+
 ```
 sudo apt-get install libsdl-dev
 sudo apt-get install libsdl-image1.2-dev
