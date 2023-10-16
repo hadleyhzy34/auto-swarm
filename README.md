@@ -6,12 +6,13 @@ sudo apt-get install libarmadillo-dev
 sudo apt-get install ros-<distro>-gazebo-ros
 git clone -b new https://github.com/hadleyhzy34/auto-swarm.git
 cd auto-swarm
-catkin_make -j$(nproc)
+catkin_make -j$(nproc) or catkin_make -DPYTHON_EXECUTABLE=/usr/bin/python
 source devel/setup.bash
 ```
 
 ## Installation Issues:
 
+make sure catking_pkg python package is installed and python path is set
 ```
 sudo apt-get install libsdl-dev
 sudo apt-get install libsdl-image1.2-dev
