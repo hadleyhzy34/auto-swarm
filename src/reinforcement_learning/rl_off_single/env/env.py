@@ -16,7 +16,7 @@ from tf.transformations import euler_from_quaternion, quaternion_from_euler
 
 class Env():
     def __init__(self, args):
-        self.rank = 0
+        self.rank = 15
         self.goal_x = 0
         self.goal_y = 0
         self.map_x = -10.
@@ -25,6 +25,7 @@ class Env():
         self.device = args.device
         self.namespace = args.namespace
         self.theta = np.zeros(2) # [yaw, omega]
+        self.linear = np.zeros(1) #[linear_velocity]
         self.heading = 0
         self.action_size = args.action_size
         self.initGoal = True
@@ -58,6 +59,7 @@ class Env():
 
         self.theta[0] = yaw
         self.theta[1] = odom.twist.twist.angular.z
+        self.linear = odom.twist.twist.linear.x
 
     def getState(self, scan):
         # import ipdb;ipdb.set_trace()
@@ -73,9 +75,9 @@ class Env():
             done = True # done because of collision
 
         goal_pos = np.array([self.goal_x - self.position.x, self.goal_y - self.position.y])
-        self.goal_distance = np.linalg.norm(goal_pos)
-        
-        if self.goal_distance < 0.2:
+        goal_distance = np.linalg.norm(goal_pos)
+
+        if goal_distance < 0.2:
             self.goal_reached = True
             done = True # done because of goal reached
 
@@ -83,9 +85,10 @@ class Env():
         yaw = self.theta[0]
         rot = np.array([[np.cos(yaw),np.sin(yaw)],[-np.sin(yaw),np.cos(yaw)]])  #(2,2)
         goal_pos = np.matmul(rot, goal_pos[:,None])[:,0]  #(2,)
-        
+
         # print(f'cur pos: {self.position.x,self.position.y}, goal_pos: {self.goal_x,self.goal_y}')
-        return np.concatenate((scan_range, goal_pos), axis=0), done
+        # pdb.set_trace()
+        return np.concatenate((scan_range, goal_pos, np.array([self.theta[0], self.linear, self.theta[1]])), axis=0), done
 
     def setReward(self, state, done, action):
         """
@@ -134,7 +137,9 @@ class Env():
         return:
             reward: value
         """
-        reward = 0
+        reward = 0.
+        goal_distance = 0.
+
         if done:
             if self.goal_reached:
                 reward += 15
@@ -147,33 +152,33 @@ class Env():
                 self.status = 'Hit'
         else:
             goal_distance = np.linalg.norm([self.goal_x - self.position.x, self.goal_y - self.position.y])
-            
-            # # goal distance reward
-            if self.goal_distance - goal_distance > 0:
-                reward += self.goal_distance - goal_distance
-            else:
-                reward += 2 * (self.goal_distance - goal_distance)
-            self.goal_distance = goal_distance
-            
-            # goal direction reward/penalty
-            # pdb.set_trace()
-            # self.theta[0] in range of [-pi,pi]
-            theta_diff = np.abs(self.theta[0] - self.goal_theta)
-            if theta_diff > self.theta_diff:
-                reward += 2 * (self.theta_diff - theta_diff)
-            else:
-                reward += self.theta_diff - theta_diff
-            self.theta_diff = theta_diff
-            
-            # punish and accumulate number of steps
-            # reward -= .1
-            
-            # punish large angular acceleration
-            # if self.theta[1] > 0.7 or self.theta[1] < -0.7:
-            #     reward += self.r_rotation * self.theta[1]
+
+        # # goal distance reward
+        if self.goal_distance - goal_distance > 0:
+            reward += self.goal_distance - goal_distance
+        else:
+            reward += 2 * (self.goal_distance - goal_distance)
+        self.goal_distance = goal_distance
+
+        # goal direction reward/penalty
+        # pdb.set_trace()
+        # self.theta[0] in range of [-pi,pi]
+        # theta_diff = np.abs(self.theta[0] - self.goal_theta)
+        # if theta_diff > self.theta_diff:
+        #     reward += 2 * (self.theta_diff - theta_diff)
+        # else:
+        #     reward += self.theta_diff - theta_diff
+        # self.theta_diff = theta_diff
+
+        # punish and accumulate number of steps
+        # reward -= .1
+
+        # punish large angular acceleration
+        # if self.theta[1] > 0.7 or self.theta[1] < -0.7:
+        #     reward += self.r_rotation * self.theta[1]
 
         return reward
-    
+
     def step(self, action):
         # pdb.set_trace()
         # max_angular_vel = 1.5
@@ -245,7 +250,7 @@ class Env():
         state_msg.pose.orientation.x = 0
         state_msg.pose.orientation.y = 0
         state_msg.pose.orientation.z = 0
-        state_msg.pose.orientation.w = 1
+        state_msg.pose.orientation.w = 1.
 
         # modify target cricket ball position
         target = ModelState()
@@ -256,8 +261,8 @@ class Env():
         rospy.wait_for_service('/gazebo/set_model_state')
         try:
             set_state = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
-            resp = set_state( state_msg )
-            res  = set_state( target )
+            set_state( state_msg )
+            set_state( target )
 
         except (rospy.ServiceException) as e:
             print("gazebo/set_model_state Service call failed")

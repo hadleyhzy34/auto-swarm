@@ -11,6 +11,7 @@ from util.costmap import state2costmap
 from torch.utils.tensorboard import SummaryWriter
 import random
 import string
+from agent.dwa import dwa
 
 def train(args):
     # pdb.set_trace()
@@ -44,22 +45,16 @@ def train(args):
     for e in range(EPISODES):
         done = False
         state = env.reset()
-        state = state2costmap(state)
-        # pdb.set_trace()
 
         score = 0
         for t in range(agent.episode_step):
-            action = agent.select_action(state)
+            # action = agent.select_action(state)
+            action = dwa(state)
 
             # execute actions and wait until next scan(state)
             next_state, reward, done = env.step(action)
-            next_state = state2costmap(next_state)
 
-            agent.replay_buffer.push(state, action, reward, next_state, done)
-
-            # if agent.replay_buffer.position >= agent.replay_buffer.capacity:
-            if agent.replay_buffer.position >= agent.update_step:
-                agent.learn(agent.replay_buffer,args.batch_size)
+            # agent.replay_buffer.push(state, action, reward, next_state, done)
 
             score += reward
             state = next_state

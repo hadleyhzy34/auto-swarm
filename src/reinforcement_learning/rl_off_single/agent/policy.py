@@ -8,27 +8,7 @@ import torchvision.models as models
 from torch.optim import Adam
 import pdb
 import torchvision.models as models
-
-class ReplayBuffer:
-    def __init__(self, capacity):
-        self.capacity = capacity
-        self.buffer = []
-        self.position = 0
-    
-    def push(self, state, action, reward, next_state, done):
-        if len(self.buffer) < self.capacity:
-            self.buffer.append(None)
-        self.buffer[self.position % self.capacity] = (state, action, reward, next_state, done)
-        self.position = self.position + 1
-    
-    def sample(self, batch_size):
-        batch = random.sample(self.buffer, batch_size)
-        # pdb.set_trace()
-        state, action, reward, next_state, done = map(np.stack, zip(*batch))
-        return state, action, reward, next_state, done
-    
-    def __len__(self):
-        return len(self.buffer)
+from agent.buffer import ReplayBuffer
 
 def weights_init_(m):
     if isinstance(m, nn.Linear):
@@ -129,7 +109,8 @@ class PolicyNetwork(nn.Module):
         return action, log_prob, mean, log_std
 
 class Agent(object):
-    def __init__(self, action_dim, gamma=0.99, 
+    def __init__(self, state_dim, action_dim,
+                 gamma=0.99, 
                  tau=1e-2, 
                  alpha=0.2, 
                  hidden_dim=1024,
@@ -138,13 +119,14 @@ class Agent(object):
                  batch_size=32,
                  episode_step=500,
                  lr=0.001,
+                 update_step=500,
                  device=torch.device('cpu')):
 
         self.gamma = gamma
         self.tau = tau
         self.alpha = alpha
         self.episode_step = episode_step # maximum steps per episode
-        self.epsilon = 1.0
+        self.epsilon = 0.01
         self.epsilon_decay = 0.95
         self.epsilon_min = 0.01
         self.batch_size = batch_size
@@ -154,6 +136,8 @@ class Agent(object):
         self.hidden_dim = hidden_dim
         self.backbone_dim = backbone_dim
         self.action_dim = action_dim
+        self.state_dim = state_dim
+        self.update_step = update_step
 
         self.target_update_interval = 1
         self.replay_buffer = ReplayBuffer(replay_buffer_size)
@@ -183,7 +167,8 @@ class Agent(object):
         # agent action parameters
         self.max_ang_vel = 1.5
         self.max_lin_vel = 0.15
-        
+        self.update = 0
+
     def select_action(self, state, eval=False):
         # pdb.set_trace()
         state = state.to(device=self.device).unsqueeze(0).permute(0,3,1,2)  #(1,3,360,256)
@@ -213,17 +198,18 @@ class Agent(object):
         # print(f'linear: {action[0]}, angular: {action[1]}')
         return action
 
-    def update_parameters(self, memory, batch_size):
+    def learn(self, memory, batch_size):
         # pdb.set_trace()
         # Sample a batch from memory
-        state_batch, action_batch, reward_batch, next_state_batch, done_batch = memory.sample(batch_size=batch_size)
-
+        state_batch, action_batch, reward_batch, next_state_batch, done_batch = memory.sample(batch_size=batch_size)  #(b,l)
+        
         state_batch = torch.FloatTensor(state_batch).to(self.device)
         next_state_batch = torch.FloatTensor(next_state_batch).to(self.device)
         action_batch = torch.FloatTensor(action_batch).to(self.device)
         reward_batch = torch.FloatTensor(reward_batch).to(self.device).unsqueeze(1)
         done_batch = torch.FloatTensor(done_batch).to(self.device).unsqueeze(1)
 
+        # pdb.set_trace()
         with torch.no_grad():
             #vf_next_target = self.value_target(next_state_batch)
             #next_q_value = reward_batch + (1 - done_batch) * self.gamma * (vf_next_target)
@@ -258,17 +244,6 @@ class Agent(object):
         policy_loss.backward()
         self.policy_optim.step()
 
-        #vf = self.value(state_batch)
-        
-        #with torch.no_grad():
-        #    vf_target = min_qf_pi - (self.alpha * log_pi)
-
-        #vf_loss = F.mse_loss(vf, vf_target) # 
-
-        #self.value_optim.zero_grad()
-        #vf_loss.backward()
-        #self.value_optim.step()
-        
         alpha_loss = -(self.log_alpha * (log_pi + self.target_entropy).detach()).mean()
 
         self.alpha_optim.zero_grad()
@@ -278,11 +253,13 @@ class Agent(object):
         self.alpha = self.log_alpha.exp()
         #alpha_tlogs = self.alpha.clone() # For TensorboardX logs
 
-        #if updates % self.target_update_interval == 0:
-        soft_update(self.critic_target, self.critic, self.tau)
+        if self.update % self.target_update_interval == 0:
+            soft_update(self.critic_target, self.critic, self.tau)
+            self.update += 1
 
+        # print(f'system parameters are updated')
         #return vf_loss.item(), qf1_loss.item(), qf2_loss.item(), policy_loss.item()
-    
+
     # Save model parameters
     def save_models(self, episode_count):
         torch.save(self.policy.state_dict(),dirPath+'/model/'+str(episode_count)+ '_policy_net.pth')
@@ -302,111 +279,3 @@ class Agent(object):
         # soft_q_net.load_state_dict(torch.load(dirPath + '/SAC_model/' + world + '/'+str(episode)+ 'soft_q_net.pth'))
         # target_value_net.load_state_dict(torch.load(dirPath + '/SAC_model/' + world + '/'+str(episode)+ 'target_value_net.pth'))
         print('***Models load***')
-
-
-# is_training = True
-
-# max_episodes  = 15000
-# max_steps   = 500
-# rewards     = []
-# batch_size  = 256
-
-# action_dim = 2
-# state_dim  = 363
-# hidden_dim = 500
-# ACTION_V_MIN = 0.0 # m/s
-# ACTION_W_MIN = -1. # rad/s
-# ACTION_V_MAX = 0.3 # m/s
-# ACTION_W_MAX = 2. # rad/s
-# world = 'stage_1'
-# replay_buffer_size = 50000
-
-# agent = SAC(state_dim, action_dim)
-# replay_buffer = ReplayBuffer(replay_buffer_size)
-# # agent.load_models(320)
-
-
-# print('State Dimensions: ' + str(state_dim))
-# print('Action Dimensions: ' + str(action_dim))
-# print('Action Max: ' + str(ACTION_V_MAX) + ' m/s and ' + str(ACTION_W_MAX) + ' rad/s')
-
-
-
-# if __name__ == '__main__':
-#     # pdb.set_trace()
-#     rospy.init_node('sac')
-#     pub_result = rospy.Publisher('result', Float32, queue_size=5)
-#     result = Float32()
-#     env = Env()
-#     before_training = 4
-#     past_action = np.array([0.,0.])
-
-#     episodic_reward = []
-#     for ep in range(max_episodes):
-#         done = False
-#         state = env.reset()
-        
-#         if is_training and not ep%10 == 0 and len(replay_buffer) > before_training*batch_size:
-#             print('Episode: ' + str(ep) + ' training')
-#         else:
-#             if len(replay_buffer) > before_training*batch_size:
-#                 print('Episode: ' + str(ep) + ' evaluating')
-#             else:
-#                 print('Episode: ' + str(ep) + ' adding to memory')
-
-#         rewards_current_episode = 0.
-
-#         for step in range(max_steps):
-#             # state = np.float32(state)
-#             # print('state___', state)
-#             # pdb.set_trace()
-#             state = state.cuda()
-#             if is_training and not ep%10 == 0:
-#                 action = agent.select_action(state)
-#             else:
-#                 action = agent.select_action(state, eval=True)
-
-#             if not is_training:
-#                 action = agent.select_action(state, eval=True)
-#             unnorm_action = np.array([action_unnormalized(action[0], ACTION_V_MAX, ACTION_V_MIN), action_unnormalized(action[1], ACTION_W_MAX, ACTION_W_MIN)])
-            
-#             # print(f'action is: {unnorm_action}')
-#             # next_state, reward, done = env.step(unnorm_action, past_action)
-#             next_state, reward, done = env.step(unnorm_action)
-#             # print('action', unnorm_action,'r',reward)
-#             # past_action = copy.deepcopy(action)
-
-#             rewards_current_episode += reward
-#             # next_state = np.float32(next_state)
-#             if not ep%10 == 0 or not len(replay_buffer) > before_training*batch_size:
-#                 if reward == 100.:
-#                     print('***\n-------- Maximum Reward ----------\n****')
-#                     for _ in range(3):
-#                         replay_buffer.push(state[0].cpu(), unnorm_action, reward, next_state[0].cpu(), done)
-#                 else:
-#                     replay_buffer.push(state[0].cpu(), unnorm_action, reward, next_state[0].cpu(), done)
-            
-#             if len(replay_buffer) > before_training*batch_size and is_training and not ep% 10 == 0:
-#                 agent.update_parameters(replay_buffer, batch_size)
-#             state = copy.deepcopy(next_state)
-            
-#             # pdb.set_trace()
-#             if done:
-#                 break
-#         episodic_reward.append(rewards_current_episode)
-
-#         print('reward per ep: ' + str(rewards_current_episode))
-#         print('reward average per ep: ' + str(rewards_current_episode) + ' and break step: ' + str(step))
-#         if ep%10 == 0:
-#             if len(replay_buffer) > before_training*batch_size:
-#                 result = rewards_current_episode
-#                 pub_result.publish(result)
-        
-#         if ep%20 == 0 and ep != 0:
-#             agent.save_models(ep)
-#         # pdb.set_trace()
-#         if len(episodic_reward) > 10:
-#             print(f'current reward is: {statistics.fmean(episodic_reward[-10:])}')
-
-#         if ep % 500 == 0 and ep != 0:
-#             env.dist_range += 0.1

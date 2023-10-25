@@ -29,10 +29,50 @@ def state2costmap(state):
     # assign waypoint
     deg = torch.atan2(torch.tensor([state[-1]]),torch.tensor([state[-2]]))
     deg = int((deg + torch.pi)/ angle_increment)
+    # deg = int(deg / angle_increment)
     cur_dist = np.linalg.norm([state[-2], state[-1]])
     dist = int(cur_dist / dist_increment)
     costmap[deg-5:deg+5,dist-5:dist+5] = torch.tensor([1.,1.,1.])
-    
+
+    # plt.axis('equal')
+    # plt.imshow(costmap)
+    # plt.show()
+    # image = preprocess(state)
+
+    return costmap
+
+def batchState2costmap(state):
+    """
+    description:
+    args:
+        state: torch.tensor, (b, scan.ranges + rel_goal_pos), (b, 362,)
+    return:
+        costmap: torch.tensor, (b,360,256,3)
+    """
+    dist_increment = 4. / 256
+    angle_increment = 2 * torch.pi / 360
+
+    # pdb.set_trace()
+    batch_size = state.shape[0]
+    costmap = torch.zeros((batch_size,360,256,3))  #image type of obs, (h,w,channel)
+    for i in range(360):
+        if state[i] > 3.5:
+            pass
+        else:
+            #degree
+            deg = (i+180)%360
+            dist = int(state[i]/dist_increment)
+            costmap[deg,dist] = torch.tensor([1.,0.,0.])  #assign red pixel to obstacle
+
+    # pdb.set_trace()
+    # assign waypoint
+    deg = torch.atan2(torch.tensor([state[-1]]),torch.tensor([state[-2]]))
+    deg = int((deg + torch.pi)/ angle_increment)
+    # deg = int(deg / angle_increment)
+    cur_dist = np.linalg.norm([state[-2], state[-1]])
+    dist = int(cur_dist / dist_increment)
+    costmap[deg-5:deg+5,dist-5:dist+5] = torch.tensor([1.,1.,1.])
+
     # plt.axis('equal')
     # plt.imshow(costmap)
     # plt.show()

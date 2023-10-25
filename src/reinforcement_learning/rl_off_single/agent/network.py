@@ -81,10 +81,10 @@ class DQN(nn.Module):
     def __init__(self, state_dim, action_dim, device = torch.device('cpu')):
         super(DQN, self).__init__()
 
-        self.backbone = models.mobilenet_v3_small(weights=None)
+        # self.backbone = models.mobilenet_v3_small(weights=None)
         # self.dropout = 0.2
         self.model = nn.Sequential(
-                nn.Linear(1000, 1024),
+                nn.Linear(576, 1024),
                 nn.ReLU(),
                 nn.Linear(1024,1024),
                 nn.ReLU(),
@@ -95,6 +95,9 @@ class DQN(nn.Module):
                 ).to(device)
 
         self.apply(weights_init_)
+
+        self.backbone = list(models.mobilenet_v3_small(weights=None).to(self.device).children())[0]
+        self.backbone = torch.nn.Sequential(*(self.backbone[:-1]))
 
     def forward(self, s):
         '''
