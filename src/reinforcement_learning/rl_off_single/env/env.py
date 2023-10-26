@@ -126,7 +126,7 @@ class Env():
                 reward += self.r_rotation * self.theta[1]
 
         return reward
-    
+
     def setSacReward(self, state, done, action):
         """
         Description: set reward for each step
@@ -153,7 +153,7 @@ class Env():
         else:
             goal_distance = np.linalg.norm([self.goal_x - self.position.x, self.goal_y - self.position.y])
 
-        # # goal distance reward
+        # goal distance reward
         if self.goal_distance - goal_distance > 0:
             reward += self.goal_distance - goal_distance
         else:
@@ -169,7 +169,7 @@ class Env():
         # else:
         #     reward += self.theta_diff - theta_diff
         # self.theta_diff = theta_diff
-
+        #
         # punish and accumulate number of steps
         # reward -= .1
 

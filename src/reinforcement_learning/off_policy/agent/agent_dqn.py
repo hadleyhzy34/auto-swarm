@@ -30,6 +30,13 @@ import torch.nn as nn
 from agent.network import DQN,Buffer
 from env.env import Env
 
+def soft_update(target, source, tau):
+    for target_param, param in zip(target.parameters(), source.parameters()):
+        target_param.data.copy_(target_param.data * (1.0 - tau) + param.data * tau)
+
+def hard_update(target, source):
+    for target_param, param in zip(target.parameters(), source.parameters()):
+        target_param.data.copy_(param.data)
 
 class Agent(nn.Module):
     def __init__(self, state_size, action_size, device = torch.device('cpu')):
@@ -38,10 +45,11 @@ class Agent(nn.Module):
         self.state_size = state_size
         self.action_size = action_size
         self.episode_step = 6000 # maximum steps per episode
+        self.tau = 1e-2
         self.gamma = 0.99
         self.epsilon = 1.0
-        self.epsilon_decay = 0.99
-        self.epsilon_min = 0.05
+        self.epsilon_decay = 0.95
+        self.epsilon_min = 0.01
         self.batch_size = 64
         self.device = device
         print(f'agent training device is loaded: {self.device}')
@@ -104,10 +112,6 @@ class Agent(nn.Module):
 
     def learn(self):
         # import ipdb;ipdb.set_trace()
-        # update target network 
-        if self.learn_step_counter % self.target_replace_iter == 0:
-            self.tgt_net.load_state_dict(self.eval_net.state_dict())
-        self.learn_step_counter += 1
 
         # buffer sampling
         mini_batch = self.memory.sample(self.batch_size)
@@ -125,33 +129,9 @@ class Agent(nn.Module):
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-    
-    # def collect_callback(self, timer):
-    #     if self.step == 0:
-    #         self.state = self.env.reset()
-        
-    #     action = self.choose_action(self.state)
-    #     next_state, reward, done = self.env.step(action)
-    #     self.store_transition(self.state, action, reward, next_state, done)
 
-    #     if self.memory.pointer >= self.memory.capacity:
-    #         self.learn()
-        
-    #     self.score += reward
-    #     self.state = next_state
-
-    #     # update steps
-    #     self.step += 1
-
-    #     if self.step >= 500:
-    #         rospy.loginfo("Time out!!!")
-    #         done = True
-        
-    #     if done:
-    #         print(f'Ep: {self.episode}, score: {self.score}, memory_capacity: {self.memory.pointer}, steps: {self.step}')
-    #         self.score = 0
-    #         self.episode += 1
-    #         self.step = 0
-            
-    #     if self.epsilon > self.epsilon_min:
-    #         self.epsilon *= self.epsilon_decay
+        # update target network 
+        if self.learn_step_counter % self.target_replace_iter == 0:
+            # self.tgt_net.load_state_dict(self.eval_net.state_dict())
+            soft_update(self.tgt_net, self.eval_net, self.tau)
+        self.learn_step_counter += 1

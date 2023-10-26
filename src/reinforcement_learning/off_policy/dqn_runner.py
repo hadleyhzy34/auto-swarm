@@ -1,73 +1,40 @@
-#################################################################################
-# Copyright 2018 ROBOTIS CO., LTD.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#################################################################################
-
-# Authors: Gilbert #
-
+import pdb
+import argparse
 import rospy
-import os
-import json
 import numpy as np
 import random
-import time
-import sys
-# from collections import deque
 from std_msgs.msg import Float32MultiArray
 import torch
-import torch.nn as nn
 from agent.agent_dqn import Agent
 from env.env import Env
+from torch.utils.tensorboard import SummaryWriter
+import string
 
-# def train():
-#     rospy.init_node('turtlebot3_dqn_stage')
-
-#     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-#     state_size = 362
-#     action_size = 5
-
-#     agent = Agent(state_size, action_size, device)
-
-#     rospy.spin()
-
-def train():
+def train(args):
     rospy.init_node('turtlebot3_dqn_stage_1')
-    # pub_result = rospy.Publisher('result', Float32MultiArray, queue_size=5)
-    # pub_get_action = rospy.Publisher('get_action', Float32MultiArray, queue_size=5)
-    # result = Float32MultiArray()
-    # get_action = Float32MultiArray()
 
-    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    state_size = 362
-    action_size = 5
-    EPISODES = 6000
+    if torch.cuda.is_available():
+        device = args.device
+    else:
+        device = torch.device('cpu')
 
-    env = Env(action_size)
+    #summary writer session name
+    res = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+    writer = SummaryWriter(f'./log/{res}')
 
-    agent = Agent(state_size, action_size, device)
+    env = Env(args.action_size)
+    agent = Agent(args.state_size, args.action_size, device)
     scores, episodes = [], []
-    # global_step = 0
-    # start_time = time.time()
 
-    for e in range(EPISODES):
+    for e in range(args.episodes):
         done = False
         state = env.reset()
         score = 0
         for t in range(agent.episode_step):
             action = agent.choose_action(state)
 
-            next_state, reward, done = env.step(action)  # execute actions and wait until next scan(state)
+            # execute actions and wait until next scan
+            next_state, reward, done = env.step(action)
 
             agent.store_transition(state, action, reward, next_state, done)
 
@@ -78,17 +45,40 @@ def train():
             state = next_state
 
             if t >= 500:
-                rospy.loginfo("Time out!!")
+                # rospy.loginfo("Time out!!")
                 done = True
 
             if done:
                 scores.append(score)
                 episodes.append(e)
-                print(f'Ep: {e}, score: {score}, memory_capacity: {agent.memory.pointer}, steps: {t}')
+                print(f'Ep: {e}, '
+                    f'score: {score:.5f}, '
+                    f'memory_pointer: {agent.memory.pointer}/{agent.memory.capacity}, '
+                    f'steps: {t}, '
+                    f'epsilon: {agent.epsilon:.5f}, '
+                    f'status: {env.status}'
+                    )
                 break
+
+        writer.add_scalar('reward', score, e)
+
+        if (e+1) % 150 == 0:
+            env.rank += 1
 
         if agent.epsilon > agent.epsilon_min:
             agent.epsilon *= agent.epsilon_decay
 
 if __name__ == '__main__':
-    train()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--namespace', type=str, default='tb3')
+    parser.add_argument('--state_size', type=int, default=362)
+    parser.add_argument('--action_size', type=int, default=5)
+    parser.add_argument('--episodes', type=int, default=5000)
+    parser.add_argument('--device', type=str, default='cuda')
+    parser.add_argument('--batch_size', type=int, default=64)
+    parser.add_argument('--replay_buffer_size', type=int, default=5000)
+    parser.add_argument('--episode_step', type=int, default=500)
+    parser.add_argument('--lr', type=float, default=0.001)
+    parser.add_argument('--update_step', type=int, default=500)
+    args = parser.parse_args()
+    train(args)

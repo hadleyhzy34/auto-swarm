@@ -15,7 +15,7 @@
 #################################################################################
 
 # Authors: Gilbert #
-
+import pdb
 import rospy
 from gazebo_msgs.msg import ModelState 
 from gazebo_msgs.srv import SetModelState
@@ -33,13 +33,18 @@ class Env():
     def __init__(self, action_size):
         self.goal_x = 0
         self.goal_y = 0
+        self.namespace = 'tb3'
+        self.status = 'initialized'
+        self.map_x = -10.
+        self.map_y = -10.
+        self.rank = 0
         self.heading = 0
         self.action_size = action_size
         self.initGoal = True
         self.get_goalbox = False  # reach goal or not
         self.position = Pose()
-        self.pub_cmd_vel = rospy.Publisher('cmd_vel', Twist, queue_size=5)
-        self.sub_odom = rospy.Subscriber('odom', Odometry, self.getOdometry)
+        self.pub_cmd_vel = rospy.Publisher(self.namespace+'/cmd_vel', Twist, queue_size=5)
+        self.sub_odom = rospy.Subscriber(self.namespace+'/odom', Odometry, self.getOdometry)
         self.reset_proxy = rospy.ServiceProxy('gazebo/reset_simulation', Empty)
         self.unpause_proxy = rospy.ServiceProxy('gazebo/unpause_physics', Empty)
         self.pause_proxy = rospy.ServiceProxy('gazebo/pause_physics', Empty)
@@ -109,14 +114,16 @@ class Env():
 
         if done:
             if self.get_goalbox: # done because of goal reached
-                rospy.loginfo("Goal!")
+                # rospy.loginfo("Goal!")
                 reward = 200
                 self.pub_cmd_vel.publish(Twist())
                 self.get_goalbox = False
+                self.status = 'goal'
             else:  # done because of collision
-                rospy.loginfo("Collision!!")
+                # rospy.loginfo("Collision!!")
                 reward = -200
                 self.pub_cmd_vel.publish(Twist())
+                self.status = 'hit'
 
         # if done:
         #     rospy.loginfo("Collision!!")
@@ -148,7 +155,7 @@ class Env():
         data = None
         while data is None:
             try:
-                data = rospy.wait_for_message('scan', LaserScan, timeout=5)
+                data = rospy.wait_for_message(self.namespace+'/scan', LaserScan, timeout=5)
             except:
                 pass
         
@@ -164,21 +171,23 @@ class Env():
             self.reset_proxy()
         except (rospy.ServiceException) as e:
             print("gazebo/reset_simulation service call failed")
-
+        
+        # pdb.set_trace()
         self.reset_model() #reinitialize model starting position
 
         data = None
         while data is None:
             try:
-                data = rospy.wait_for_message('scan', LaserScan, timeout=5)
+                data = rospy.wait_for_message(self.namespace+'/scan', LaserScan, timeout=5)
             except:
                 pass
 
         if self.initGoal:
             # self.goal_x, self.goal_y = self.respawn_goal.getPosition()
-            self.goal_x, self.goal_y = self.r_pts_map1()
+            # _,_,self.goal_x, self.goal_y = self.random_pts_map()
             self.initGoal = False
 
+        self.status = 'running'
         self.goal_distance = self.getGoalDistace()
         state, done = self.getState(data)
 
@@ -186,29 +195,70 @@ class Env():
     
     def reset_model(self):
         state_msg = ModelState()
-        state_msg.model_name = 'autorace'
-        state_msg.pose.position.x, state_msg.pose.position.y = self.r_pts_map1()
+        state_msg.model_name = self.namespace
+        # update initial position and goal positions
+        state_msg.pose.position.x, state_msg.pose.position.y, self.goal_x, self.goal_y = self.random_pts_map()
+        self.init_x = state_msg.pose.position.x
+        self.init_y = state_msg.pose.position.y
         # state_msg.pose.position.z = 0.3
-        # state_msg.pose.orientation.x = 0
-        # state_msg.pose.orientation.y = 0
-        # state_msg.pose.orientation.z = 0
-        # state_msg.pose.orientation.w = 1
+        state_msg.pose.orientation.x = 0
+        state_msg.pose.orientation.y = 0
+        state_msg.pose.orientation.z = 0
+        state_msg.pose.orientation.w = 1.
+
+        # modify target cricket ball position
+        target = ModelState()
+        target.model_name = 'cricket_ball'
+        # target.pose.position.x = self.goal_x
+        # target.pose.position.y = self.goal_y
+        target.pose.position.x = 0.
+        target.pose.position.y = 0.
 
         rospy.wait_for_service('/gazebo/set_model_state')
         try:
             set_state = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
-            resp = set_state( state_msg )
+            set_state( state_msg )
+            set_state( target )
 
         except (rospy.ServiceException) as e:
             print("gazebo/set_model_state Service call failed")
     
-    def r_pts_map1(self):
-        x = np.random.uniform(0.14, 1-0.14)
-        y = np.random.uniform(0.14, 1-0.14)
-        while True:
-            idx = np.random.randint(36)
-            if idx not in [7,8,10,16,19,25,26,28]:
-                break
-        x = -3 + (idx%6) + x
-        y = 3 - (idx//6) -1 +y
-        return x,y
+    def random_pts_map(self):
+        """
+        Description: random initialize starting position and goal position, make distance > 0.1
+        return:
+            x1,y1: initial position
+            x2,y2: goal position
+        """
+        # pdb.set_trace()
+        # print(f'goal position is going to be reset')
+        x1,x2,y1,y2 = 0,0,0,0
+        while (x1 - x2) ** 2 < 0.01:
+            x1 = np.random.randint(5) + np.random.uniform(0.16, 1-0.16) # random initialize x inside single map
+            x2 = np.random.randint(5) + np.random.uniform(0.16, 1-0.16) # random initialize goal position
+
+        while (y1 - y2) ** 2 < 0.01:
+            y1 = np.random.randint(5) + np.random.uniform(0.16, 1-0.16) # random initialize y inside single map
+            y2 = np.random.randint(5) + np.random.uniform(0.16, 1-0.16) # random initialize goal position
+
+        x1 = self.map_x + (self.rank % 4) * 5 + x1
+        y1 = self.map_y + (3 - self.rank // 4) * 5 + y1
+
+        x2 = self.map_x + (self.rank % 4) * 5 + x2
+        y2 = self.map_y + (3 - self.rank // 4) * 5 + y2
+
+        # set waypoint within scan range
+        # pdb.set_trace()
+        dist = np.linalg.norm([y2 - y1, x2 - x1]) 
+        while dist < 0.25 or dist > 3.5:
+            x2 = np.random.randint(5) + np.random.uniform(0.16, 1-0.16) # random initialize goal position
+            y2 = np.random.randint(5) + np.random.uniform(0.16, 1-0.16) # random initialize goal position
+
+            x2 = self.map_x + (self.rank % 4) * 5 + x2
+            y2 = self.map_y + (3 - self.rank // 4) * 5 + y2
+            dist = np.linalg.norm([y2 - y1, x2 - x1])
+
+        # self.rank = (self.rank + 1) % 8
+        # print(f'goal position is respawned')
+
+        return x1,y1,x2,y2   
