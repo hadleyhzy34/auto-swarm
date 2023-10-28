@@ -1,21 +1,3 @@
-#################################################################################
-# Copyright 2018 ROBOTIS CO., LTD.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#################################################################################
-
-# Authors: Gilbert #
-
 import rospy
 import os
 import json
@@ -23,6 +5,7 @@ import numpy as np
 import random
 import time
 import sys
+import pdb
 from collections import deque
 from std_msgs.msg import Float32MultiArray
 import torch
@@ -76,20 +59,19 @@ class Agent(nn.Module):
         self.eval_net = DQN(self.state_size, self.action_size, self.device)
         self.optimizer = torch.optim.Adam(self.eval_net.parameters(), lr=self.lr)
 
-        # target network update frequency
-        # self.target_replace_iter = 100
-        # self.learn_step_counter = 0
-
         # loss
         self.loss = nn.MSELoss()
+        self.cql = True
 
-        # ros timer for training
-        self.inference_freq = 10
-        self.episode = 0  # current episode
-        self.episodes = 6000 
-        self.step = 0 # current steps
-        self.step_episode = 500
-        self.score = 0 # total reward for each episode
+    def cql_loss(self, q_values, current_action):
+        """
+        Description: Computes the CQL loss for a batch of Q-values and actions.
+        """
+        # pdb.set_trace()
+        logsumexp = torch.logsumexp(q_values, dim=1, keepdim=True)
+        q_a = q_values.gather(1, current_action[None,:])
+
+        return (logsumexp - q_a).mean()
 
     def choose_action(self, x):
         """
@@ -127,17 +109,20 @@ class Agent(nn.Module):
 
         # actions to int
         actions = mini_batch[:,self.state_size].to(dtype=int)
-        q_eval = self.eval_net(states).gather(1,actions.unsqueeze(-1)).squeeze(-1)
-        q_next = self.tgt_net(next_states).detach()
-        q_target = rewards + self.gamma * q_next.max(1)[0]
+        q_evals = self.eval_net(states)
+        q_eval = q_evals.gather(1,actions.unsqueeze(-1)).squeeze(-1)
+
+        with torch.no_grad():
+            q_next = self.tgt_net(next_states).detach()
+            q_target = rewards + self.gamma * q_next.max(1)[0]
+
         loss = self.loss(q_eval, q_target)
+        if self.cql:
+            loss += self.cql_loss(q_evals, actions)
 
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-        print(f'agent is updated')
+
         # update target network 
-        # if self.learn_step_counter % self.target_replace_iter == 0:
-        # self.tgt_net.load_state_dict(self.eval_net.state_dict())
         soft_update(self.tgt_net, self.eval_net, self.tau)
-        # self.learn_step_counter += 1

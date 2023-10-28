@@ -208,11 +208,12 @@ class Env():
 
         # modify target cricket ball position
         target = ModelState()
-        target.model_name = 'cricket_ball'
-        # target.pose.position.x = self.goal_x
-        # target.pose.position.y = self.goal_y
-        target.pose.position.x = 0.
-        target.pose.position.y = 0.
+        target.model_name = 'target_red_0'
+        target.pose.position.x = self.goal_x
+        target.pose.position.y = self.goal_y
+        target.pose.position.z = 0.
+        # target.pose.position.x = 0.
+        # target.pose.position.y = 0.
 
         rospy.wait_for_service('/gazebo/set_model_state')
         try:
@@ -261,4 +262,4 @@ class Env():
         # self.rank = (self.rank + 1) % 8
         # print(f'goal position is respawned')
 
-        return x1,y1,x2,y2   
+        return x1,y1,x2,y2
