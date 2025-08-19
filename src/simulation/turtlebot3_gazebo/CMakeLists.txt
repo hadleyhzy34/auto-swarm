@@ -1,3 +1,4 @@
+set(CMAKE_SKIP_RPATH TRUE)
 ################################################################################
 # Set minimum required version of cmake, project name and compile options
 ################################################################################
